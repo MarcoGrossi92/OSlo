@@ -28,7 +28,10 @@ include(GNUInstallDirs)
 set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/modules")
 
 # Define third-party libs
-file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/intel_ode/intel64/libiode_intel64.lib")
+#file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/intel_ode/intel64/libiode_intel64.lib")
+# ODEPACK
+set ( odepackD ${CMAKE_CURRENT_SOURCE_DIR}/lib/odepack )
+add_subdirectory(${odepackD})
 
 # Build library
 add_subdirectory(src/lib)

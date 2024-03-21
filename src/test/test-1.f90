@@ -15,17 +15,43 @@ MODULE functions
 
 CONTAINS
 
-  SUBROUTINE FEX(NEQ,T,Y,YDOT)
+  SUBROUTINE Fhairer(NEQ,T,Y,YDOT)
     IMPLICIT NONE
     INTEGER, INTENT (IN) :: NEQ
-    DOUBLE PRECISION, INTENT (IN) :: T
-    DOUBLE PRECISION, INTENT (IN) :: Y(NEQ)
-    DOUBLE PRECISION, INTENT (OUT) :: YDOT(NEQ)
+    real(8), INTENT (IN) :: T
+    real(8), INTENT (IN) :: Y(NEQ)
+    real(8), INTENT (OUT) :: YDOT(NEQ)
     YDOT(1) = -.04D0*Y(1) + 1.D4*Y(2)*Y(3)
     YDOT(3) = 3.E7*Y(2)*Y(2)
     YDOT(2) = -YDOT(1) - YDOT(3)
-    RETURN
-  END SUBROUTINE FEX
+  END SUBROUTINE Fhairer
+
+  SUBROUTINE Fdvode(NEQ,T,Y,YDOT,RPAR,IPAR)
+    IMPLICIT NONE
+    INTEGER, INTENT (IN) :: NEQ
+    real(8), INTENT (IN) :: T
+    real(8), INTENT (IN) :: Y(NEQ)
+    real(8), INTENT (OUT) :: YDOT(NEQ)
+    real(8), intent(in) :: RPAR(*)
+    integer, intent(in) :: IPAR(*)
+    YDOT(1) = -.04D0*Y(1) + 1.D4*Y(2)*Y(3)
+    YDOT(3) = 3.E7*Y(2)*Y(2)
+    YDOT(2) = -YDOT(1) - YDOT(3)
+  END SUBROUTINE Fdvode
+
+  subroutine Fodepack(self, neq, t, y, ydot, ierr)
+    use odepack_mod
+    class(lsoda_class), intent(inout) :: self
+    integer, intent(in) :: neq
+    real(8), intent(in) :: t
+    real(8), intent(in) :: y(neq)
+    real(8), intent(out) :: ydot(neq)
+    integer, intent(out) :: ierr
+    YDOT(1) = -.04D0*Y(1) + 1.D4*Y(2)*Y(3)
+    YDOT(3) = 3.E7*Y(2)*Y(2)
+    YDOT(2) = -YDOT(1) - YDOT(3)
+    ierr = 0
+  end subroutine Fodepack
 
 END MODULE functions
 
@@ -34,32 +60,29 @@ module ode
   use functions
   implicit none
 
+  real(8) :: RTOL = 1.d-4
+  real(8) :: ATOL(3) = [1.D-8, 1.D-14, 1.D-6]
+
 contains
 
-subroutine radau(n,t1,t2,Z)
+subroutine wrap_sdirk(n,t1,t2,Z)
   implicit none
   integer, intent(in) :: n
   real(8), intent(inout) :: t1, t2
   real(8), intent(inout) :: Z(n)
-  real(8) :: h, ATOL(3), RTOL(1)
+  real(8) :: h
   integer :: ITOL, IJAC, MLJAC, MUJAC, IOUT, IDID, MUMAS, MLMAS, IMAS
   integer :: LWORK, LIWORK, LRCONT
-  real(8) :: WORK(4*(n+1)*(n+1)+12*(n+1)+20)
-  integer :: IWORK(3*(n+1)+20)
-  real(8) :: RPAR(1)=0d0
-  integer :: IPAR(1)=0
-  external :: RADAU5
+  real(8) :: WORK(2*N*N+12*N+7)
+  integer :: IWORK(2*N+4)
+  external :: SDIRK4
 
-  LWORK=4*n*n+12*n+20
-  LIWORK=3*n+20
+  LWORK=2*N*N+12*N+7
+  LIWORK=2*N+4
   LRCONT=5*n+2
   IWORK = 0
   
   h = 0.D0
-  RTOL = 1.d-4
-  ATOL(1) = 1.D-8
-  ATOL(2) = 1.D-14
-  ATOL(3) = 1.D-6
   ITOL = 0
   IJAC = 0
   IMAS = 0
@@ -73,36 +96,200 @@ subroutine radau(n,t1,t2,Z)
   WORK(1)=1.1d-19
 
   !% Implicit solver with automatic numerical Jacobi matrix computations
-  call RADAU5(n,fex,t1,Z,t2,H,                               &
+  call SDIRK4(n,Fhairer,t1,Z,t2,H,                     &
+                RTOL,ATOL,ITOL,                        &
+                dummy,IJAC,MLJAC,MUJAC,                &
+                dummy,IMAS,MLMAS,MUMAS,                &
+                dummy,IOUT,                            &
+                WORK,LWORK,IWORK,LIWORK,LRCONT,IDID)
+
+end subroutine wrap_sdirk
+
+
+subroutine wrap_radau5(n,t1,t2,Z)
+  implicit none
+  integer, intent(in) :: n
+  real(8), intent(inout) :: t1, t2
+  real(8), intent(inout) :: Z(n)
+  real(8) :: h
+  integer :: ITOL, IJAC, MLJAC, MUJAC, IOUT, IDID, MUMAS, MLMAS, IMAS
+  integer :: LWORK, LIWORK
+  real(8) :: WORK(4*(n)*(n)+12*(n)+20)
+  integer :: IWORK(3*(n)+20)
+  real(8) :: RPAR(1)=0d0
+  integer :: IPAR(1)=0
+  external :: RADAU5
+
+  LWORK=4*n*n+12*n+20
+  LIWORK=3*n+20
+  IWORK = 0
+  
+  h = 0.D0
+  ITOL = 0
+  IJAC = 0
+  IMAS = 0
+  MLJAC = n
+  MLMAS = n
+  MUJAC = 0
+  MUMAS = 0
+  IOUT = 0
+  WORK = 0d0
+
+  WORK(1)=1.1d-19
+
+  !% Implicit solver with automatic numerical Jacobi matrix computations
+  call RADAU5(n,Fhairer,t1,Z,t2,H,                              &
                 RTOL,ATOL,ITOL,                                 &
-                dummy,IJAC,MLJAC,MUJAC,                          &
-                dummy,IMAS,MLMAS,MUMAS,                          &
-                dummy,IOUT,                                    &
+                dummy,IJAC,MLJAC,MUJAC,                         &
+                dummy,IMAS,MLMAS,MUMAS,                         &
+                dummy,IOUT,                                     &
                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
 
-end subroutine radau
+end subroutine wrap_radau5
 
-subroutine dvode(n,t1,t2,Z)
+
+subroutine wrap_radau(n,t1,t2,Z)
+  implicit none
+  integer, intent(in) :: n
+  real(8), intent(inout) :: t1, t2
+  real(8), intent(inout) :: Z(n)
+  real(8) :: h
+  integer :: ITOL, IJAC, MLJAC, MUJAC, IOUT, IDID, MUMAS, MLMAS, IMAS
+  integer :: LWORK, LIWORK
+  integer, parameter :: NSMAX=7
+  real(8) :: WORK((NSMAX+1)*N*N+(3*NSMAX+3)*N+20)
+  integer :: IWORK((2+(NSMAX-1)/2)*N+20)
+  real(8) :: RPAR(1)=0d0
+  integer :: IPAR(1)=0
+  external :: RADAU
+
+  LWORK = (NSMAX+1)*N*N+(3*NSMAX+3)*N+20
+  LIWORK= (2+(NSMAX-1)/2)*N+20
+  IWORK = 0
+  
+  h = 0.D0
+  ITOL = 0
+  IJAC = 0
+  IMAS = 0
+  MLJAC = n
+  MLMAS = n
+  MUJAC = 0
+  MUMAS = 0
+  IOUT = 0
+  WORK = 0d0
+
+  WORK(1)=1.1d-19
+
+  call RADAU(n,Fhairer,t1,Z,t2,H,                              &
+                RTOL,ATOL,ITOL,                                 &
+                dummy,IJAC,MLJAC,MUJAC,                         &
+                dummy,IMAS,MLMAS,MUMAS,                         &
+                dummy,IOUT,                                     &
+                WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
+
+end subroutine wrap_radau
+
+
+subroutine wrap_rodas(n,t1,t2,Z)
+  implicit none
+  integer, intent(in) :: n
+  real(8), intent(inout) :: t1, t2
+  real(8), intent(inout) :: Z(n)
+  real(8) :: h
+  integer :: ITOL, IJAC, MLJAC, MUJAC, IOUT, IDID, MUMAS, MLMAS, IMAS
+  integer :: LWORK, LIWORK
+  real(8) :: WORK(2*N*N+14*N+20)
+  integer :: IWORK(N+20)
+  real(8) :: RPAR(1)=0d0
+  integer :: IPAR(1)=0, IFCN, IDFX
+  external :: RODAS
+
+  LWORK = 2*N*N+14*N+20
+  LIWORK= N+20
+  IWORK = 0
+  
+  h = 0.D0
+  IFCN = 0
+  IDFX = 0
+  ITOL = 0
+  IJAC = 0
+  IMAS = 0
+  MLJAC = n
+  MLMAS = n
+  MUJAC = 0
+  MUMAS = 0
+  IOUT = 0
+  WORK = 0d0
+
+  WORK(1)=1.1d-19
+
+  call RODAS(n,Fhairer,IFCN,t1,Z,t2,H,                          &
+                RTOL,ATOL,ITOL,                                 &
+                dummy,IJAC,MLJAC,MUJAC,dummy,IDFX,              &
+                dummy,IMAS,MLMAS,MUMAS,                         &
+                dummy,IOUT,                                     &
+                WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
+
+end subroutine wrap_rodas
+
+
+subroutine wrap_dvodef90OMP(n,t1,t2,Z)
   use DVODE_F90_M
   implicit none
   integer, intent(in) :: n
   real(8), intent(inout) :: t1, t2
   real(8), intent(inout) :: Z(n)
-  real(8) :: ATOL(n), RTOL
   integer :: ITASK, ISTATE
   TYPE (VODE_OPTS) :: OPTIONS
 
-  RTOL = 1.D-4
-  ATOL(1) = 1.D-8
-  ATOL(2) = 1.D-14
-  ATOL(3) = 1.D-6
   ITASK = 1
   ISTATE = 1
-  OPTIONS = SET_NORMAL_OPTS(DENSE_J=.TRUE.,ABSERR_VECTOR=ATOL,      &
-        RELERR=RTOL)
-  CALL DVODE_F90(FEX,n,Z,t1,t2,ITASK,ISTATE,OPTIONS)
+  OPTIONS = SET_OPTS(DENSE_J=.TRUE.,ABSERR_VECTOR=ATOL,RELERR=RTOL)
+  CALL DVODE_F90(Fhairer,n,z,t1,t2,ITASK,ISTATE,OPTIONS)
 
-end subroutine dvode
+end subroutine wrap_dvodef90OMP
+
+
+subroutine wrap_dvode(n,t1,t2,Z)
+  implicit none
+  integer, intent(in) :: n
+  real(8), intent(inout) :: t1, t2
+  real(8), intent(inout) :: Z(n)
+  integer :: ITASK, ISTATE, ITOL, MF, LRW, IOPT
+  integer :: IWORK(30 + N), LIW, IPAR(1)=0
+  real(8) :: RWORK(22 +  9*N + 2*N**2), RPAR(1)=0d0
+  external :: dvode
+
+  LRW = 22 +  9*N + 2*N**2
+  LIW = 30 + N
+
+  ITASK = 1
+  ISTATE = 1
+  IOPT = 0
+  ITOL = 2
+  MF = 22
+  call DVODE (Fdvode, n, z, t1, t2, ITOL, RTOL, ATOL, ITASK,     &
+                ISTATE, IOPT, RWORK, LRW, IWORK, LIW, dummy, MF, &
+                RPAR, IPAR)
+
+end subroutine wrap_dvode
+
+
+subroutine wrap_odepack(n,t1,t2,Z)
+  use odepack_mod
+  implicit none
+  integer, intent(in) :: n
+  real(8), intent(inout) :: t1, t2
+  real(8), intent(inout) :: Z(n)
+  type(lsoda_class) :: eq
+  integer :: itask, istate
+
+  itask = 1
+  istate = 1
+  call eq%initialize(Fodepack, n, istate=istate)
+  call eq%integrate(z, t1, t2, rtol, atol, itask, istate)
+
+end subroutine wrap_odepack
 
 subroutine dummy()
 endsubroutine
@@ -114,24 +301,64 @@ PROGRAM RUNEXAMPLE1
   use ode
   implicit none
   integer, parameter :: neq = 3
-  real(8) :: Y(neq), t, TOUT
+  real(8) :: Y(neq), t, TOUT, tlimit
+  real(8) :: time1, time2
+  character(len=30) :: Format
 
-  Y(1) = 1.0D0
-  Y(2) = 0.0D0
-  Y(3) = 0.0D0
-  T = 0.0D0
-  TOUT = 40.D0
+  tlimit = 4.d+10
+  Format = '(A8,4E20.8)'
 
-  call dvode(neq,T,TOUT,Y)
-  write(*,'(A,4F15.8)') 'dvode', Y(:), sum(y)
+  call initialize
+  call cpu_time(time1)
+  call wrap_dvode(neq,T,TOUT,Y)
+  call cpu_time(time2)
+  write(*,Format) 'dvode', time2-time1, Y(:)
 
-  Y(1) = 1.0D0
-  Y(2) = 0.0D0
-  Y(3) = 0.0D0
-  T = 0.0D0
-  TOUT = 40.D0
+  call initialize
+  call cpu_time(time1)
+  call wrap_dvodef90OMP(neq,T,TOUT,Y)
+  call cpu_time(time2)
+  write(*,Format) 'dvodef90', time2-time1, Y(:)
 
-  call radau(neq,T,TOUT,Y)
-  write(*,'(A,4F15.8)') 'radau', Y(:), sum(y)
+  call initialize
+  call cpu_time(time1)
+  call wrap_odepack(neq,T,TOUT,Y)
+  call cpu_time(time2)
+  write(*,Format) 'odepack', time2-time1, Y(:)
+
+  call initialize
+  call cpu_time(time1)
+  call wrap_radau(neq,T,TOUT,Y)
+  call cpu_time(time2)
+  write(*,Format) 'radau5', time2-time1, Y(:)
+
+  call initialize
+  call cpu_time(time1)
+  call wrap_radau(neq,T,TOUT,Y)
+  call cpu_time(time2)
+  write(*,Format) 'radau', time2-time1, Y(:)
+
+  call initialize
+  call cpu_time(time1)
+  call wrap_rodas(neq,T,TOUT,Y)
+  call cpu_time(time2)
+  write(*,Format) 'rodas', time2-time1, Y(:)
+
+  call initialize
+  call cpu_time(time1)
+  call wrap_sdirk(neq,T,TOUT,Y)
+  call cpu_time(time2)
+  write(*,Format) 'sdirk4', time2-time1, Y(:)
+
+contains
+
+  subroutine initialize()
+    implicit none
+    Y(1) = 1.0D0
+    Y(2) = 0.0D0
+    Y(3) = 0.0D0
+    T = 0.0D0
+    TOUT = tlimit
+  end subroutine
 
 END PROGRAM RUNEXAMPLE1
