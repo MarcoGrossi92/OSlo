@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.13)
 #set(CMAKE_Fortran_COMPILER "gfortran")
 
-project (ORION LANGUAGES Fortran)
+project (NerO LANGUAGES Fortran)
 
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
 # seach path for cmake modules
@@ -23,10 +23,12 @@ INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 # about Fortran.
 INCLUDE(${CMAKE_MODULE_PATH}/SetParallelizationLibrary.cmake)
 
-include(GNUInstallDirs)
-
 # Set directories
+include(GNUInstallDirs)
 set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/modules")
+
+# Define third-party libs
+file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/intel_ode/intel64/libiode_intel64.lib")
 
 # Build library
 add_subdirectory(src/lib)
