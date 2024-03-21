@@ -1,7 +1,4 @@
-# CMake project file for ORION
-
 cmake_minimum_required(VERSION 3.13)
-#set(CMAKE_Fortran_COMPILER "gfortran")
 
 project (NerO LANGUAGES Fortran)
 
@@ -28,7 +25,8 @@ include(GNUInstallDirs)
 set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/modules")
 
 # Define third-party libs
-#file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/intel_ode/intel64/libiode_intel64.lib")
+# Intel-ODE
+file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel64/*")
 # ODEPACK
 set ( odepackD ${CMAKE_CURRENT_SOURCE_DIR}/lib/odepack )
 add_subdirectory(${odepackD})
@@ -36,7 +34,7 @@ add_subdirectory(${odepackD})
 # Build library
 add_subdirectory(src/lib)
 
-# Build tests and applications (only if ORION build has not been called by another program)
+# Build tests and applications (only if NerO build has not been called by another program)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message("-- Full build allowed")
     add_subdirectory(src/test)

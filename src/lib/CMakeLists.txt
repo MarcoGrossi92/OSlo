@@ -5,5 +5,5 @@ add_library(dvode dvode.f)
 add_library(dvodef90OMP dvode_OpenMP.f90)
 
 # Hairer solvers
-file(GLOB HSRC libradau.f radau5.f radau.f rodas.f sdirk4.f)
+file(GLOB HSRC toolbox_hairer.f radau5.f radau.f rodas.f sdirk4.f)
 add_library(hairer ${HSRC})
