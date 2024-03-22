@@ -6,7 +6,10 @@ foreach(TEST ${TESTS})
   get_filename_component(EXE_NAME ${TEST} NAME_WE)
   add_executable(${EXE_NAME} ${TEST})
   add_test(${EXE_NAME} ${EXECUTABLE_OUTPUT_PATH}/${EXE_NAME} COMMAND ${EXE_NAME} -stress)
-  target_link_libraries(${EXE_NAME} dvode dvodef90OMP odepack_mod hairer ${INTELODE})
+  target_link_libraries(${EXE_NAME} oslo)
+  if(UNIX AND NOT APPLE)
+    target_link_libraries(${EXE_NAME} ${INTELODE})
+  endif()
   target_include_directories(${EXE_NAME}
       INTERFACE
           $<BUILD_INTERFACE:${CMAKE_Fortran_MODULE_DIRECTORY}>
