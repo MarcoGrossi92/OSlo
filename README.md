@@ -1,1 +1,1 @@
-# NerO
+# OSlo - ODE Solver toolbox 
