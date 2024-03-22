@@ -267,7 +267,7 @@ C *** *** *** *** *** *** *** *** *** *** *** *** ***
 C          DECLARATIONS 
 C *** *** *** *** *** *** *** *** *** *** *** *** *** 
       IMPLICIT REAL*8 (A-H,O-Z)
-      DIMENSION Y(N),ATOL(1),RTOL(1),WORK(LWORK),IWORK(LIWORK)
+      DIMENSION Y(N),ATOL(*),RTOL(*),WORK(LWORK),IWORK(LIWORK)
       LOGICAL IMPLCT,JBAND,ARRET
       EXTERNAL FCN,JAC,MAS,SOLOUT
       COMMON/STAT/NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL
@@ -505,10 +505,10 @@ C ----------------------------------------------------------
       REAL*8 Y(N),YHAT(N),Z(N),Y0(N),Z1(N),Z2(N),Z3(N),Z4(N),Z5(N)
       REAL*8 SCAL(N),F1(N),G1(N),H1(N)
       REAL*8 FJAC(LDJAC,N),E(LE,N),FMAS(LDMAS,N)
-      REAL*8 ATOL(1),RTOL(1)
+      REAL*8 ATOL(*),RTOL(*)
       INTEGER IP(N),IPHES(N)
       LOGICAL REJECT,FIRST,IMPLCT,BANDED,CALJAC,NEWTRE
-      COMMON /CONT/NN,NN2,NN3,NN4,XOLD,HSOL,CONT(1)
+      COMMON /CONT/NN,NN2,NN3,NN4,XOLD,HSOL,CONT(300)
       COMMON/STAT/NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL
 C *** *** *** *** *** *** ***
 C  INITIALISATIONS
