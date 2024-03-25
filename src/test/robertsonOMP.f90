@@ -62,7 +62,7 @@ PROGRAM RUNEXAMPLE1
   use omp_lib
 #endif
   implicit none
-  integer, parameter :: neq = 3, nc = 4
+  integer, parameter :: neq = 3, nc = 10000
   real(8) :: Y(neq,nc), t, TOUT, tlimit
   real(8) :: time1, time2, RT(neq), AT(neq)
   character(len=30) :: Format
