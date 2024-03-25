@@ -11,10 +11,8 @@ module oslo
   real(8), allocatable :: RTOL(:)
   real(8), allocatable :: ATOL(:)
 
-  real(8) :: h
-
   integer :: ITOL
-  integer :: IJAC, MLJAC, MUJAC, IOUT, IDID, MUMAS, MLMAS, IMAS
+  integer :: IJAC, MLJAC, MUJAC, MUMAS, MLMAS, IMAS
   integer :: LWORK, LIWORK
   integer :: LRCONT     ! see sdirk4.f
   integer :: NSMAX      ! see radau.f
@@ -46,25 +44,20 @@ contains
     case('dvodef90')
     case('lsoda')
     case('radau5')
-      h = 0.D0
       LWORK=4*(n)*(n)+12*(n)+20
       LIWORK=3*n+20
     case('radau')
-      h = 0.D0
       NSMAX = 7
       LWORK = (NSMAX+1)*N*N+(3*NSMAX+3)*N+20
       LIWORK= (2+(NSMAX-1)/2)*N+20
     case('rodas')
-      h = 0.D0
       LWORK = 2*N*N+14*N+20
       LIWORK= N+20
     case('sdirk4')
-      h = 0.D0
       LWORK=2*N*N+12*N+7
       LIWORK=2*N+4
       LRCONT=5*n+2
     case('dodesol')
-      h = 1.d-15
       LWORK = (7+2*n)*n
       LIWORK = 128
     end select
@@ -81,11 +74,13 @@ subroutine wrap_dodesol(n,t1,t2,Z,fcn)
   external :: fcn
   ! specific
   external :: dodesol_mk52lfn
+  real(8) :: h
   integer :: kd(n), ierr
   real(8) :: hm, ep, tr
   real(8) :: dpar(LWORK)
   integer :: ipar(LIWORK)
   
+  h = 1.d-15
   hm = 1.d-15
   ep = minval(RTOL)
   tr = minval(ATOL)
@@ -105,16 +100,20 @@ subroutine wrap_sdirk4(n,t1,t2,Z,fcn)
   external :: fcn
   ! specific
   external :: SDIRK4
+  real(8) :: h
   real(8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
+  integer :: NN,NN2,NN3,NN4,IDID,IOUT
+  real(8) :: XOLD,HSOL,RCONT(LRCONT-2)
+  integer :: NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL
 
+  h = 0.D0
   IJAC = 0
   IMAS = 0
   MLJAC = n
   MLMAS = n
   MUJAC = 0
   MUMAS = 0
-  IOUT = 0
 
   IWORK = 0
   WORK = 0d0
@@ -125,7 +124,9 @@ subroutine wrap_sdirk4(n,t1,t2,Z,fcn)
                 dummy,IJAC,MLJAC,MUJAC,                &
                 dummy,IMAS,MLMAS,MUMAS,                &
                 dummy,IOUT,                            &
-                WORK,LWORK,IWORK,LIWORK,LRCONT,IDID)
+                WORK,LWORK,IWORK,LIWORK,LRCONT,IDID,   &
+                NN,NN2,NN3,NN4,XOLD,HSOL,RCONT,        &
+                NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL)
 
 end subroutine wrap_sdirk4
 
@@ -138,29 +139,43 @@ subroutine wrap_radau5(n,t1,t2,Z,fcn)
   external :: fcn
   ! specific
   external :: RADAU5
+  real(8) :: h
   real(8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
-  real(8) :: RPAR(1)=0d0
-  integer :: IPAR(1)=0
+  real(8) :: RPAR(1)
+  integer :: IPAR(1)
+  real(8) :: RTOL_(n), ATOL_(n)
+  integer :: NN,NN2,NN3,NN4,IDID,IOUT
+  real(8) :: XSOL,HSOL,C2M1,C1M1
+  integer :: MLE,MUE,MBJAC,MBB,MDIAG,MDIFF,MBDIAG
 
+  h = 0.D0
   IJAC = 0
   IMAS = 0
   MLJAC = n
   MLMAS = n
   MUJAC = 0
   MUMAS = 0
-  IOUT = 0
 
   IWORK = 0
   WORK = 0d0
   WORK(1)=1.1d-19
 
-  call RADAU5(n,fcn,t1,Z,t2,H,                                  &
-                RTOL,ATOL,ITOL,                                 &
-                dummy,IJAC,MLJAC,MUJAC,                         &
-                dummy,IMAS,MLMAS,MUMAS,                         &
-                dummy,IOUT,                                     &
-                WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
+  RPAR=0d0
+  IPAR=0
+  
+  ! Reassignment is necessary since in radau5 tollerances are modified during the calculation
+  RTOL_ = RTOL
+  ATOL_ = ATOL
+
+  call RADAU5(n,fcn,t1,Z,t2,H,                          &
+                RTOL_,ATOL_,ITOL,                       &
+                dummy,IJAC,MLJAC,MUJAC,                 &
+                dummy,IMAS,MLMAS,MUMAS,                 &
+                dummy,IOUT,                             &
+                WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID, &
+                NN,NN2,NN3,NN4,XSOL,HSOL,C2M1,C1M1,     &
+                MLE,MUE,MBJAC,MBB,MDIAG,MDIFF,MBDIAG)
 
 end subroutine wrap_radau5
 
@@ -173,18 +188,19 @@ subroutine wrap_radau(n,t1,t2,Z,fcn)
   external :: fcn
   ! specific
   external :: RADAU
+  real(8) :: h
   real(8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
   real(8) :: RPAR(1)=0d0
-  integer :: IPAR(1)=0
+  integer :: IPAR(1)=0,IDID,IOUT
 
+  h = 0.D0
   IJAC = 0
   IMAS = 0
   MLJAC = n
   MLMAS = n
   MUJAC = 0
   MUMAS = 0
-  IOUT = 0
 
   IWORK = 0
   WORK = 0d0
@@ -208,12 +224,14 @@ subroutine wrap_rodas(n,t1,t2,Z,fcn)
   external :: fcn
   ! specific
   external :: RODAS
+  real(8) :: h
   real(8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
   real(8) :: RPAR(1)=0d0
   integer :: IPAR(1)=0
-  integer :: IFCN, IDFX
+  integer :: IFCN, IDFX, IDID, IOUT
 
+  h = 0.D0
   IFCN = 0
   IDFX = 0
   IJAC = 0
@@ -222,7 +240,6 @@ subroutine wrap_rodas(n,t1,t2,Z,fcn)
   MLMAS = n
   MUJAC = 0
   MUMAS = 0
-  IOUT = 0
 
   IWORK = 0
   WORK = 0d0

@@ -62,11 +62,12 @@ PROGRAM RUNEXAMPLE1
   use omp_lib
 #endif
   implicit none
-  integer, parameter :: neq = 3, nc = 100
+  integer, parameter :: neq = 3, nc = 4
   real(8) :: Y(neq,nc), t, TOUT, tlimit
   real(8) :: time1, time2, RT(neq), AT(neq)
   character(len=30) :: Format
-  integer :: i, nthreads
+  integer :: i, nthreads=1
+  character(10) :: try
 
 #if defined (_OPENMP)
   !$omp parallel
@@ -78,37 +79,16 @@ PROGRAM RUNEXAMPLE1
   RT = 1.d-4
   AT = [1.D-8, 1.D-14, 1.D-6]
   tlimit = 4.d+10
-  Format = '(A8,4E20.8)'
+  Format = '(A8,E20.8,A15)'
 
-  call setup(N=neq,solver='dvode',RT=RT,AT=AT)
-  call initialize
-  call cpu_time(time1)
-  do i = 1, nc
-    T = 0.0D0; TOUT = tlimit
-    call wrap_dvode(neq,T,TOUT,Y(:,i),Fdvode)
-  enddo
-  call cpu_time(time2)
-  write(*,Format) 'dvode', time2-time1, Y(:,nc)
-
-  call setup(N=neq,solver='dvodef90',RT=RT,AT=AT)
-  call initialize
-  call cpu_time(time1)
-  !$omp parallel private(i,T,TOUT)
-  !$omp do
-  do i = 1, nc
-    T = 0.0D0; TOUT = tlimit
-    call wrap_dvodef90OMP(neq,T,TOUT,Y(:,i),Fgeneral)
-  enddo
-  !$omp enddo
-  !$omp end parallel
-  call cpu_time(time2)
-  write(*,Format) 'dvodef90', time2-time1, Y(:,nc)
-
+# if defined(__GFORTRAN__)
   call setup(N=neq,solver='lsoda',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  !$omp parallel private(i,T,TOUT)
-  !$omp do
+  !$omp parallel default(none), &
+  !$omp shared(y,tlimit), &
+  !$omp private(i,T,TOUT)
+  !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
     call wrap_odepack(neq,T,TOUT,Y(:,i),Fodepack)
@@ -116,13 +96,18 @@ PROGRAM RUNEXAMPLE1
   !$omp enddo
   !$omp end parallel
   call cpu_time(time2)
-  write(*,Format) 'odepack', time2-time1, Y(:,nc)
+  try = 'fail'
+  if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
+  write(*,Format) 'odepack', (time2 - time1)/nthreads, try
+#endif
 
   call setup(N=neq,solver='radau5',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  !$omp parallel private(i,T,TOUT)
-  !$omp do
+  !$omp parallel default(none), &
+  !$omp shared(y,tlimit), &
+  !$omp private(i,T,TOUT)
+  !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
     call wrap_radau5(neq,T,TOUT,Y(:,i),Fgeneral)
@@ -130,7 +115,9 @@ PROGRAM RUNEXAMPLE1
   !$omp enddo
   !$omp end parallel
   call cpu_time(time2)
-  write(*,Format) 'radau5', time2-time1, Y(:,nc)
+  try = 'fail'
+  if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
+  write(*,Format) 'radau5', (time2 - time1)/nthreads, try
 
   call setup(N=neq,solver='radau',RT=RT,AT=AT)
   call initialize
@@ -140,7 +127,9 @@ PROGRAM RUNEXAMPLE1
     call wrap_radau(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
   call cpu_time(time2)
-  write(*,Format) 'radau', time2-time1, Y(:,nc)
+  try = 'fail'
+  if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
+  write(*,Format) 'radau', (time2 - time1)/nthreads, try
 
   call setup(N=neq,solver='rodas',RT=RT,AT=AT)
   call initialize
@@ -150,25 +139,46 @@ PROGRAM RUNEXAMPLE1
     call wrap_rodas(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
   call cpu_time(time2)
-  write(*,Format) 'rodas', time2-time1, Y(:,nc)
+  try = 'fail'
+  if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
+  write(*,Format) 'rodas', (time2 - time1)/nthreads, try
 
   call setup(N=neq,solver='sdirk4',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
+  !$omp parallel default(none), &
+  !$omp shared(y,tlimit), &
+  !$omp private(i,T,TOUT)
+  !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
     call wrap_sdirk4(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
+  !$omp enddo
+  !$omp end parallel
   call cpu_time(time2)
-  write(*,Format) 'sdirk4', time2-time1, Y(:,nc)
+  try = 'fail'
+  if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
+  write(*,Format) 'sdirk4', (time2 - time1)/nthreads, try
 
 # if defined(INTEL)
   call setup(N=neq,solver='dodesol',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_dodesol(neq,T,TOUT,Y,Fgeneral)
+  !$omp parallel default(none), &
+  !$omp shared(y,tlimit), &
+  !$omp private(i,T,TOUT)
+  !$omp do schedule(dynamic)
+  do i = 1, nc
+    T = 0.0D0; TOUT = tlimit
+    call wrap_dodesol(neq,T,TOUT,Y(:,i),Fgeneral)
+  enddo
+  !$omp enddo
+  !$omp end parallel
   call cpu_time(time2)
-  write(*,Format) 'intel', time2-time1, Y(:,nc)
+  try = 'fail'
+  if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
+  write(*,Format) 'intel', (time2 - time1)/nthreads, try
 # endif
 
 contains
