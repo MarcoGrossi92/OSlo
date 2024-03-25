@@ -69,60 +69,60 @@ PROGRAM RUNEXAMPLE1
   tlimit = 4.d+10
   Format = '(A8,4E20.8)'
 
-  call setup(N=neq,solver='dvode',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='dvode',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_dvode(neq,T,TOUT,Y,Fdvode)
+  call run_odesolver(neq,T,TOUT,Y,Fdvode)
   call cpu_time(time2)
   write(*,Format) 'dvode', time2-time1, Y(:)
 
-  call setup(N=neq,solver='dvodef90',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='dvodef90',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_dvodef90OMP(neq,T,TOUT,Y,Fgeneral)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral)
   call cpu_time(time2)
   write(*,Format) 'dvodef90', time2-time1, Y(:)
 
-  call setup(N=neq,solver='lsoda',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='lsoda',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_odepack(neq,T,TOUT,Y,Fodepack)
+  call run_odesolver(neq,T,TOUT,Y,Fodepack)
   call cpu_time(time2)
   write(*,Format) 'odepack', time2-time1, Y(:)
 
-  call setup(N=neq,solver='radau5',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='radau5',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_radau5(neq,T,TOUT,Y,Fgeneral)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral)
   call cpu_time(time2)
   write(*,Format) 'radau5', time2-time1, Y(:)
 
-  call setup(N=neq,solver='radau',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='radau',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_radau(neq,T,TOUT,Y,Fgeneral)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral)
   call cpu_time(time2)
   write(*,Format) 'radau', time2-time1, Y(:)
 
-  call setup(N=neq,solver='rodas',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='rodas',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_rodas(neq,T,TOUT,Y,Fgeneral)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral)
   call cpu_time(time2)
   write(*,Format) 'rodas', time2-time1, Y(:)
 
-  call setup(N=neq,solver='sdirk4',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='sdirk4',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_sdirk4(neq,T,TOUT,Y,Fgeneral)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral)
   call cpu_time(time2)
   write(*,Format) 'sdirk4', time2-time1, Y(:)
 
 # if defined(INTEL)
-  call setup(N=neq,solver='dodesol',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='dodesol',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
-  call wrap_dodesol(neq,T,TOUT,Y,Fgeneral)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral)
   call cpu_time(time2)
   write(*,Format) 'intel', time2-time1, Y(:)
 # endif

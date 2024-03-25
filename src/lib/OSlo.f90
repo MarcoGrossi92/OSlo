@@ -6,10 +6,29 @@
 ! All the parameters in the "setup" subroutine and within each solver procedure are set accordingly.
 
 module oslo
+  use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
   implicit none
+  private
+  public :: setup_odesolver
+  public :: run_odesolver
 
-  real(8), allocatable :: RTOL(:)
-  real(8), allocatable :: ATOL(:)
+  !> Concrete procedure pointing to one of the subroutine realizations
+  procedure(wrapper_if), pointer :: run_odesolver
+
+  !> Abstract interface relative to the generic procedure
+  abstract interface
+  subroutine wrapper_if(n,t1,t2,Z,fcn)
+    use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
+    implicit none
+    integer, intent(in) :: n
+    real(R8), intent(inout) :: t1, t2
+    real(R8), intent(inout) :: Z(n)
+    external :: fcn
+  end subroutine wrapper_if
+  end interface
+
+  real(R8), allocatable :: RTOL(:)
+  real(R8), allocatable :: ATOL(:)
 
   integer :: ITOL
   integer :: IJAC, MLJAC, MUJAC, MUMAS, MLMAS, IMAS
@@ -19,17 +38,18 @@ module oslo
 
 contains
 
-  subroutine setup(N,solver,RT,AT)
+  subroutine setup_odesolver(N,solver,RT,AT)
     implicit none
     integer, intent(in)           :: N
     character(len=*), intent(in)  :: solver
-    real(8), optional, intent(in) :: RT(N), AT(N)
+    real(R8), optional, intent(in) :: RT(N), AT(N)
 
     ! Tollerances are defined as arrays -> ITOL = 1 (Hairer); ITOL = 2 (DVODE)
     ITOL = 1
 
     if (allocated(RTOL)) deallocate(RTOL)
     if (allocated(ATOL)) deallocate(ATOL)
+    nullify(run_odesolver)
     allocate(RTOL(1:N)); allocate(ATOL(1:N))
     ! Default values
     RTOL = 1.D-4; ATOL = 1.D-10
@@ -41,43 +61,51 @@ contains
       ITOL = ITOL+1
       LWORK = 22 +  9*N + 2*N**2
       LIWORK= 30 + N
+      run_odesolver => wrap_dvode
     case('dvodef90')
+      run_odesolver => wrap_dvodef90OMP
     case('lsoda')
+      run_odesolver => wrap_odepack
     case('radau5')
       LWORK=4*(n)*(n)+12*(n)+20
       LIWORK=3*n+20
+      run_odesolver => wrap_radau5
     case('radau')
       NSMAX = 7
       LWORK = (NSMAX+1)*N*N+(3*NSMAX+3)*N+20
       LIWORK= (2+(NSMAX-1)/2)*N+20
+      run_odesolver => wrap_radau
     case('rodas')
       LWORK = 2*N*N+14*N+20
       LIWORK= N+20
+      run_odesolver => wrap_rodas
     case('sdirk4')
       LWORK=2*N*N+12*N+7
       LIWORK=2*N+4
       LRCONT=5*n+2
+      run_odesolver => wrap_sdirk4
     case('dodesol')
       LWORK = (7+2*n)*n
       LIWORK = 128
+      run_odesolver => wrap_dodesol
     end select
 
-  end subroutine setup
+  end subroutine setup_odesolver
 
 
 # if defined(INTEL)
 subroutine wrap_dodesol(n,t1,t2,Z,fcn)
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   external :: dodesol_mk52lfn
-  real(8) :: h
+  real(R8) :: h
   integer :: kd(n), ierr
-  real(8) :: hm, ep, tr
-  real(8) :: dpar(LWORK)
+  real(R8) :: hm, ep, tr
+  real(R8) :: dpar(LWORK)
   integer :: ipar(LIWORK)
   
   h = 1.d-15
@@ -95,16 +123,16 @@ end subroutine wrap_dodesol
 subroutine wrap_sdirk4(n,t1,t2,Z,fcn)
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   external :: SDIRK4
-  real(8) :: h
-  real(8) :: WORK(LWORK)
+  real(R8) :: h
+  real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
   integer :: NN,NN2,NN3,NN4,IDID,IOUT
-  real(8) :: XOLD,HSOL,RCONT(LRCONT-2)
+  real(R8) :: XOLD,HSOL,RCONT(LRCONT-2)
   integer :: NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL
 
   h = 0.D0
@@ -134,19 +162,19 @@ end subroutine wrap_sdirk4
 subroutine wrap_radau5(n,t1,t2,Z,fcn)
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   external :: RADAU5
-  real(8) :: h
-  real(8) :: WORK(LWORK)
+  real(R8) :: h
+  real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
-  real(8) :: RPAR(1)
+  real(R8) :: RPAR(1)
   integer :: IPAR(1)
-  real(8) :: RTOL_(n), ATOL_(n)
+  real(R8) :: RTOL_(n), ATOL_(n)
   integer :: NN,NN2,NN3,NN4,IDID,IOUT
-  real(8) :: XSOL,HSOL,C2M1,C1M1
+  real(R8) :: XSOL,HSOL,C2M1,C1M1
   integer :: MLE,MUE,MBJAC,MBB,MDIAG,MDIFF,MBDIAG
 
   h = 0.D0
@@ -183,15 +211,15 @@ end subroutine wrap_radau5
 subroutine wrap_radau(n,t1,t2,Z,fcn)
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   external :: RADAU
-  real(8) :: h
-  real(8) :: WORK(LWORK)
+  real(R8) :: h
+  real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
-  real(8) :: RPAR(1)=0d0
+  real(R8) :: RPAR(1)=0d0
   integer :: IPAR(1)=0,IDID,IOUT
 
   h = 0.D0
@@ -219,15 +247,15 @@ end subroutine wrap_radau
 subroutine wrap_rodas(n,t1,t2,Z,fcn)
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   external :: RODAS
-  real(8) :: h
-  real(8) :: WORK(LWORK)
+  real(R8) :: h
+  real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
-  real(8) :: RPAR(1)=0d0
+  real(R8) :: RPAR(1)=0d0
   integer :: IPAR(1)=0
   integer :: IFCN, IDFX, IDID, IOUT
 
@@ -259,8 +287,8 @@ subroutine wrap_dvodef90OMP(n,t1,t2,Z,fcn)
   use DVODE_F90_M
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   integer :: ITASK, ISTATE
@@ -277,16 +305,16 @@ end subroutine wrap_dvodef90OMP
 subroutine wrap_dvode(n,t1,t2,Z,fcn)
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   external :: dvode
   integer :: ITASK, ISTATE, MF, IOPT
-  real(8) :: WORK(LWORK)
+  real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
   integer :: IPAR(1)=0
-  real(8) :: RPAR(1)=0d0
+  real(R8) :: RPAR(1)=0d0
 
   ITASK = 1
   ISTATE = 1
@@ -304,8 +332,8 @@ subroutine wrap_odepack(n,t1,t2,Z,fcn)
   use odepack_mod
   implicit none
   integer, intent(in) :: n
-  real(8), intent(inout) :: t1, t2
-  real(8), intent(inout) :: Z(n)
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: Z(n)
   external :: fcn
   ! specific
   type(lsoda_class) :: eq

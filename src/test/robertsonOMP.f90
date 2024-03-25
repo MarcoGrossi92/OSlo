@@ -82,16 +82,16 @@ PROGRAM RUNEXAMPLE1
   Format = '(A8,E20.8,A15)'
 
 # if defined(__GFORTRAN__)
-  call setup(N=neq,solver='lsoda',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='lsoda',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   !$omp parallel default(none), &
-  !$omp shared(y,tlimit), &
+  !$omp shared(y,tlimit,run_odesolver), &
   !$omp private(i,T,TOUT)
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call wrap_odepack(neq,T,TOUT,Y(:,i),Fodepack)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fodepack)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -101,16 +101,16 @@ PROGRAM RUNEXAMPLE1
   write(*,Format) 'odepack', (time2 - time1)/nthreads, try
 #endif
 
-  call setup(N=neq,solver='radau5',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='radau5',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   !$omp parallel default(none), &
-  !$omp shared(y,tlimit), &
+  !$omp shared(y,tlimit,run_odesolver), &
   !$omp private(i,T,TOUT)
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call wrap_radau5(neq,T,TOUT,Y(:,i),Fgeneral)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -119,40 +119,52 @@ PROGRAM RUNEXAMPLE1
   if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
   write(*,Format) 'radau5', (time2 - time1)/nthreads, try
 
-  call setup(N=neq,solver='radau',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='radau',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
+  !$omp parallel default(none), &
+  !$omp shared(y,tlimit,run_odesolver), &
+  !$omp private(i,T,TOUT)
+  !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call wrap_radau(neq,T,TOUT,Y(:,i),Fgeneral)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
+  !$omp enddo
+  !$omp end parallel
   call cpu_time(time2)
   try = 'fail'
   if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
   write(*,Format) 'radau', (time2 - time1)/nthreads, try
 
-  call setup(N=neq,solver='rodas',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='rodas',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
+  !$omp parallel default(none), &
+  !$omp shared(y,tlimit,run_odesolver), &
+  !$omp private(i,T,TOUT)
+  !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call wrap_rodas(neq,T,TOUT,Y(:,i),Fgeneral)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
+  !$omp enddo
+  !$omp end parallel
   call cpu_time(time2)
   try = 'fail'
   if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
   write(*,Format) 'rodas', (time2 - time1)/nthreads, try
 
-  call setup(N=neq,solver='sdirk4',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='sdirk4',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   !$omp parallel default(none), &
-  !$omp shared(y,tlimit), &
+  !$omp shared(y,tlimit,run_odesolver), &
   !$omp private(i,T,TOUT)
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call wrap_sdirk4(neq,T,TOUT,Y(:,i),Fgeneral)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -162,16 +174,16 @@ PROGRAM RUNEXAMPLE1
   write(*,Format) 'sdirk4', (time2 - time1)/nthreads, try
 
 # if defined(INTEL)
-  call setup(N=neq,solver='dodesol',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='dodesol',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   !$omp parallel default(none), &
-  !$omp shared(y,tlimit), &
+  !$omp shared(y,tlimit,run_odesolver), &
   !$omp private(i,T,TOUT)
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call wrap_dodesol(neq,T,TOUT,Y(:,i),Fgeneral)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral)
   enddo
   !$omp enddo
   !$omp end parallel
