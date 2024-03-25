@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project (NerO LANGUAGES Fortran)
+project (OSlo LANGUAGES Fortran)
 
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
 # seach path for cmake modules
