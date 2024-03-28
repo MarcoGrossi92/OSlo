@@ -84,10 +84,12 @@ contains
       LIWORK=2*N+4
       LRCONT=5*n+2
       run_odesolver => wrap_sdirk4
+#   if defined(INTEL)
     case('dodesol')
       LWORK = (7+2*n)*n
       LIWORK = 128
       run_odesolver => wrap_dodesol
+#   endif
     end select
 
   end subroutine setup_odesolver

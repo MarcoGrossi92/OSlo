@@ -98,7 +98,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time2)
   try = 'fail'
   if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
-  write(*,Format) 'odepack', (time2 - time1)/nthreads, try
+  write(*,Format) 'lsoda', (time2 - time1)/nthreads, try
 #endif
 
   call setup_odesolver(N=neq,solver='radau5',RT=RT,AT=AT)

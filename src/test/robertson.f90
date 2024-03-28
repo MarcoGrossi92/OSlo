@@ -88,7 +88,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fodepack)
   call cpu_time(time2)
-  write(*,Format) 'odepack', time2-time1, Y(:)
+  write(*,Format) 'lsoda', time2-time1, Y(:)
 
   call setup_odesolver(N=neq,solver='radau5',RT=RT,AT=AT)
   call initialize

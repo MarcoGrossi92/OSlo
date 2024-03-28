@@ -30,7 +30,7 @@ set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/modules")
 # Intel-ODE
 if(UNIX AND NOT APPLE)
   add_compile_definitions(INTEL)
-  file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel64/*")
+  file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/lib/intel64/*")
 endif()
 # ODEPACK
 set ( odepackD ${CMAKE_CURRENT_SOURCE_DIR}/lib/odepack )

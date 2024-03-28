@@ -1,4 +1,7 @@
   MODULE DVODE_F90_M
+#if defined (_OPENMP)
+  use omp_lib
+#endif
 ! This version is the December 2005 release.
 ! Last change: 01/01/08
 !
