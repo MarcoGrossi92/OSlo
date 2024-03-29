@@ -1,6 +1,3 @@
 [submodule "lib/odepack"]
 	path = lib/odepack
 	url = https://github.com/Nicholaswogan/odepack.git
-[submodule "lib/FATODE"]
-	path = lib/FATODE
-	url = https://github.com/ComputationalScienceLaboratory/FATODE.git
