@@ -33,8 +33,10 @@ if(UNIX AND NOT APPLE)
   file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/lib/intel64/*")
 endif()
 # ODEPACK
-set ( odepackD ${CMAKE_CURRENT_SOURCE_DIR}/lib/odepack )
-add_subdirectory(${odepackD})
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  set ( odepackD ${CMAKE_CURRENT_SOURCE_DIR}/lib/odepack )
+  add_subdirectory(${odepackD})
+endif()
 # FATODE
 add_subdirectory(lib/FATODE)
 

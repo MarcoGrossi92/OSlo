@@ -38,6 +38,7 @@ CONTAINS
     YDOT(3) = 3.E7*Y(2)*Y(2)
   END SUBROUTINE Fdvode
 
+# if defined (__GFORTRAN__)
   subroutine Fodepack(self, neq, t, y, ydot, ierr)
     use odepack_mod
     class(lsoda_class), intent(inout) :: self
@@ -51,6 +52,7 @@ CONTAINS
     YDOT(3) = 3.E7*Y(2)*Y(2)
     ierr = 0
   end subroutine Fodepack
+# endif
 
   SUBROUTINE JAC(NVAR,T, V, JF)
     IMPLICIT NONE
