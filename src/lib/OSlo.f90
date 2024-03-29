@@ -11,7 +11,6 @@ module oslo
   private
   public :: setup_odesolver
   public :: run_odesolver
-  public :: wrap_sdirk4_FATODE
 
   !> Concrete procedure pointing to one of the subroutine realizations
   procedure(wrapper_if), pointer :: run_odesolver
@@ -70,9 +69,11 @@ contains
     !   run_odesolver => wrap_dvode
     ! case('dvodef90')
     !   run_odesolver => wrap_dvodef90OMP
-    ! case('lsoda')
-    !   run_odesolver => wrap_odepack
-    case('radau5')
+#   if defined(__GFORTRAN__)
+    case('lsoda')
+      run_odesolver => wrap_odepack
+#   endif
+    case('Hradau5')
       LWORK=4*(n)*(n)+12*(n)+20
       LIWORK=3*n+20
       run_odesolver => wrap_radau5
@@ -81,15 +82,21 @@ contains
     !   LWORK = (NSMAX+1)*N*N+(3*NSMAX+3)*N+20
     !   LIWORK= (2+(NSMAX-1)/2)*N+20
     !   run_odesolver => wrap_radau
-    case('rodas')
+    case('rk')
+      run_odesolver => wrap_rk_FATODE
+    case('Hrodas')
       LWORK = 2*N*N+14*N+20
       LIWORK= N+20
       run_odesolver => wrap_rodas
-    case('sdirk4')
+    case('ros')
+      run_odesolver => wrap_ros_FATODE
+    case('Hsdirk4')
       LWORK=2*N*N+12*N+7
       LIWORK=2*N+4
       LRCONT=5*n+2
       run_odesolver => wrap_sdirk4
+    case('sdirk4')
+      run_odesolver => wrap_sdirk_FATODE
 #   if defined(INTEL)
     case('dodesol')
       LWORK = (7+2*n)*n
@@ -344,27 +351,30 @@ end subroutine wrap_rodas
 
 ! end subroutine wrap_dvode
 
+#if defined(__GFORTRAN__)
+subroutine wrap_odepack(n,t1,t2,var,fcn,jac,err)
+  use odepack_mod
+  implicit none
+  integer, intent(in) :: n
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: var(n)
+  integer, intent(out)    :: err
+  external :: fcn, jac
+  ! specific
+  type(lsoda_class) :: eq
+  integer :: itask, istate
 
-! subroutine wrap_odepack(n,t1,t2,Z,fcn)
-!   use odepack_mod
-!   implicit none
-!   integer, intent(in) :: n
-!   real(R8), intent(inout) :: t1, t2
-!   real(R8), intent(inout) :: Z(n)
-!   external :: fcn
-!   ! specific
-!   type(lsoda_class) :: eq
-!   integer :: itask, istate
+  itask = 1
+  istate = 1
+  call eq%initialize(fcn, n, istate=istate)
+  call eq%integrate(var, t1, t2, minval(RTOL), ATOL, itask, istate)
+  err = 0
 
-!   itask = 1
-!   istate = 1
-!   call eq%initialize(fcn, n, istate=istate)
-!   call eq%integrate(z, t1, t2, minval(RTOL), ATOL, itask, istate)
-
-! end subroutine wrap_odepack
+end subroutine wrap_odepack
+#endif
 
 
-subroutine wrap_sdirk4_FATODE(n,t1,t2,var,fcn,jac,err)
+subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,jac,err)
   use SDIRK_f90_Integrator
   implicit none
   integer, intent(in)     :: n
@@ -382,7 +392,50 @@ subroutine wrap_sdirk4_FATODE(n,t1,t2,var,fcn,jac,err)
   call SDIRK(N,NNZERO,T1,T2,VAR,RTOL,ATOL,fcn,JAC,  &
              RCNTRL,ICNTRL,RSTATUS,ISTATUS,err)
 
-end subroutine wrap_sdirk4_FATODE
+end subroutine wrap_sdirk_FATODE
+
+
+subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,jac,err)
+  use ROS_f90_Integrator
+  implicit none
+  integer, intent(in)     :: n
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: var(n)
+  integer, intent(out)    :: err
+  external :: fcn, jac
+
+  real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
+  integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
+   
+  ICNTRL  = IWORK_global
+  RCNTRL  = 0.0
+
+  call Rosenbrock(N,NNZERO,VAR,T1,T2,   &
+          ATOL,RTOL, fcn, JAC,          &
+          RCNTRL,ICNTRL,RSTATUS,ISTATUS,err)
+
+end subroutine wrap_ros_FATODE
+
+
+subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,jac,err)
+  use RK_f90_Integrator
+  implicit none
+  integer, intent(in)     :: n
+  real(R8), intent(inout) :: t1, t2
+  real(R8), intent(inout) :: var(n)
+  integer, intent(out)    :: err
+  external :: fcn, jac
+
+  real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
+  integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
+   
+  ICNTRL  = IWORK_global
+  RCNTRL  = 0.0
+
+  call RungeKutta(  N, NNZERO, T1, T2, VAR, RTOL, ATOL, fcn, JAC, &
+                    RCNTRL,ICNTRL,RSTATUS,ISTATUS,err )
+
+  end subroutine wrap_rk_FATODE
 
 subroutine dummy()
 endsubroutine
