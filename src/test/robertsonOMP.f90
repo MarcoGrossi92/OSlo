@@ -167,6 +167,7 @@ PROGRAM RUNEXAMPLE1
   try = 'fail'
   if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
   write(*,Format) 'rk', (time2 - time1)/nthreads, try
+  if (try=='fail')write(*,*)'error = ',sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))
 
   call setup_odesolver(N=neq,solver='Hrodas',RT=RT,AT=AT)
   call initialize

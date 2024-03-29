@@ -49,7 +49,7 @@ SUBROUTINE INTEGRATE_ROS( TIN, TOUT, N, NNZERO, VAR, RTOL, ATOL, FUN, JAC,&
    INTEGER       :: ICNTRL(20), ISTATUS(20), IERR
 
    EXTERNAL :: FUN,JAC
-   INTEGER, SAVE :: Ntotal = 0
+   ! INTEGER, SAVE :: Ntotal = 0
 
    ICNTRL(:)  = 0
    RCNTRL(:)  = 0.0
@@ -496,8 +496,8 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 
 !~~~> Time loop begins below
 
-TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
-       .OR. (Direction < 0).AND.((Tend-T)+Roundoff <= ZERO) )
+TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff < ZERO) &
+       .OR. (Direction < 0).AND.((Tend-T)+Roundoff < ZERO) )
 
    IF ( ISTATUS(Nstp) > Max_no_steps ) THEN  ! Too many steps
       CALL ros_ErrorMsg(-6,T,H,IERR)
