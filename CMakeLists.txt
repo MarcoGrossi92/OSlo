@@ -36,7 +36,7 @@ endif()
 set ( odepackD ${CMAKE_CURRENT_SOURCE_DIR}/lib/odepack )
 add_subdirectory(${odepackD})
 # FATODE
-add_subdirectory(lib/FWD)
+add_subdirectory(lib/FATODE)
 
 # Build library
 add_subdirectory(src/lib)
