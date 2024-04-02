@@ -20,7 +20,7 @@ MODULE RK_f90_Integrator
   IMPLICIT NONE
 
 !~~~>  Statistics on the work performed by the Runge-Kutta method
-  INTEGER, PARAMETER :: Nfun=1, Njac=2, Nstp=3, Nacc=4, &
+  INTEGER, PARAMETER :: Nfun=1, Njac=2, Nstp=3, Nacc=4, Npassjac=0, &
     Nrej=5, Ndec=6, Nsol=7, Nsng=8, Ntexit=1, Nhacc=2, Nhnew=3
   
 CONTAINS
@@ -511,7 +511,11 @@ Tloop: DO WHILE ( (Tend-T)*Tdirection - Roundoff > ZERO )
       IF ( .NOT.SkipLU ) THEN ! This time around skip the Jac update and LU
         !~~~> Compute the Jacobian matrix
         IF ( .NOT.SkipJac ) THEN
-          CALL LSS_Jac(T,Y,JAC,data)
+          if (Npassjac==0) then
+            CALL LSS_Jac(T,Y,JAC,data)
+          else
+            call LSS_Jac(T,Y,numJAC,data)
+          endif
           ISTATUS(Njac) = ISTATUS(Njac) + 1
         END IF
         !~~~> Compute the matrices E1 and E2 and their decompositions
@@ -1736,7 +1740,33 @@ firej:IF (FirstStep.OR.Reject) THEN
       rkAinvT(3,3) = -3.508761919567443321903661209182446d0
 
   END SUBROUTINE Lobatto3A_Coefficients
-  
+
+
+  SUBROUTINE numJAC(NVAR,T, V, JF)
+    IMPLICIT NONE
+    integer :: NVAR
+    real(8) :: V(NVAR), T
+    real(8) :: JF(NVAR,NVAR)
+    real(8) :: UROUND, YSAFE, DELY
+    real(8) :: DER(NVAR), DER0(NVAR)
+    integer :: I,J
+
+    JF(:,:) = 0.0d0
+    UROUND = 1D-19
+    
+    DO I = 1, NVAR
+     YSAFE=V(I)
+     CALL FUN(NVAR,T,V,DER0)
+     DELY=DSQRT(UROUND*MAX(1.D-5,ABS(YSAFE)))
+     V(I)=YSAFE+DELY
+     CALL FUN(NVAR,T,V,DER)
+     DO J = 1, NVAR
+        JF(J,I)=(DER(J)-DER0(J))/DELY
+     ENDDO
+     V(I)=YSAFE
+    ENDDO
+  END SUBROUTINE numJAC
+
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   END SUBROUTINE RungeKutta ! and all its internal procedures
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
