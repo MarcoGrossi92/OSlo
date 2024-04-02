@@ -260,7 +260,7 @@ CONTAINS
                        rkGamma,  rkAlpha, rkBeta, rkELO
        !~~~> Local variables
       INTEGER :: i
-      DOUBLE PRECISION, PARAMETER :: ZERO = 0.0d0, ONE = 1.0d0
+      DOUBLE PRECISION, PARAMETER :: ZERO = 0.0d0, ONE = 1.0d0, tollini = 1D-20
       DOUBLE PRECISION :: DLAMCH 
       EXTERNAL ::FUN,JAC
 
@@ -272,7 +272,7 @@ CONTAINS
       rkAinvT = ZERO
       rkA = ZERO
       rkB = ZERO 
-      rkC = ZERO
+      rkC = tollini
       rkD = ZERO
       rkE = ZERO
       rkBgam = ZERO

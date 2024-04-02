@@ -17,6 +17,7 @@
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 
 MODULE ROS_f90_Integrator
+use omp_lib
 
   IMPLICIT NONE
   
@@ -236,7 +237,7 @@ SUBROUTINE Rosenbrock(N,NNZERO,Y,Tstart,Tend, &
    INTEGER       :: i, UplimTol, Max_no_steps
    LOGICAL       :: Autonomous, VectorTol
 !~~~>   Parameters
-   DOUBLE PRECISION, PARAMETER :: ZERO = 0.0, ONE  = 1.0
+   DOUBLE PRECISION, PARAMETER :: ZERO = 0.0, ONE  = 1.0, TOLLINI = 1D-20
    DOUBLE PRECISION, PARAMETER :: DeltaMin = 1.0E-5
 
    ros_A = ZERO
@@ -244,7 +245,7 @@ SUBROUTINE Rosenbrock(N,NNZERO,Y,Tstart,Tend, &
    ros_M = ZERO
    ros_E = ZERO
    ros_Alpha = ZERO
-   ros_Gamma = ZERO
+   ros_Gamma = TOLLINI
 !~~~>  Initialize statistics
    ISTATUS(1:8) = 0
    RSTATUS(1:3) = ZERO
@@ -381,7 +382,7 @@ SUBROUTINE Rosenbrock(N,NNZERO,Y,Tstart,Tend, &
 !  Integration parameters
         Autonomous, VectorTol, Max_no_steps,     &
         Roundoff, Hmin, Hmax, Hstart,            &
-        FacMin, FacMax, FacRej, FacSafe,         &
+        FacMin, FacMax, FacRej, FacSafe,lssdata, &
 !  Error indicator
         IERR)
    CALL LSS_Free(lssdata)
@@ -435,7 +436,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !~~~> Integration parameters
         Autonomous, VectorTol, Max_no_steps,     &
         Roundoff, Hmin, Hmax, Hstart,            &
-        FacMin, FacMax, FacRej, FacSafe,         &
+        FacMin, FacMax, FacRej, FacSafe, lssdata,&
 !~~~> Error indicator
         IERR )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -443,7 +444,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !      defined by ros_S (no of stages)
 !      and its coefficients ros_{A,C,M,E,Alpha,Gamma}
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  USE LS_Solver_ROS
+  USE LS_Solver_ROS, only: LSdata
   IMPLICIT NONE
 
 !~~~> Input: the initial condition at Tstart; Output: the solution at T
@@ -459,6 +460,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
    DOUBLE PRECISION, INTENT(IN) :: Hstart, Hmin, Hmax
    INTEGER, INTENT(IN) :: Max_no_steps
    DOUBLE PRECISION, INTENT(IN) :: Roundoff, FacMin, FacMax, FacRej, FacSafe
+   TYPE(LSdata) :: lssdata
 !~~~> Output: Error indicator
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables

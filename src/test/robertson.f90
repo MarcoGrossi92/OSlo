@@ -128,13 +128,6 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time2)
   write(*,Format) 'H-radau5', time2-time1, Y(:)
 
-  call setup_odesolver(N=neq,solver='H-radau',RT=RT,AT=AT)
-  call initialize
-  call cpu_time(time1)
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
-  call cpu_time(time2)
-  write(*,Format) 'H-radau', time2-time1, Y(:)
-
   call setup_odesolver(N=neq,solver='radau2a',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)

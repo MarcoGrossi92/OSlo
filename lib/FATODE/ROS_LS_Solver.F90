@@ -1,7 +1,6 @@
 #ifdef FULL_ALGEBRA
 module ls_solver_ros
       implicit none
-      save
       integer :: nvar
       type LSdata
         double precision, allocatable :: fjac(:,:),e(:,:)
@@ -15,6 +14,7 @@ contains
       type(LSdata) :: data
       integer :: ising, i, j
       double precision :: hgamma
+      external :: dgetrf
       ! prepare left hand side
       do j=1,nvar
         do i=1,nvar
@@ -31,6 +31,7 @@ contains
       type(LSdata) :: data
       double precision ::rhs(nvar)
       integer :: ising
+      external :: dgetrs
       call dgetrs( 'n', nvar, 1, data%e, nvar, data%ip, rhs, nvar, ising)
       end subroutine lss_solve
 

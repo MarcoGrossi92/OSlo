@@ -4,8 +4,6 @@ error out if e.g. OpenBLAS is not found" OFF)
 
 if (${REQUIRE_FAST_LAPACK})
   find_package(LAPACK REQUIRED)
-else()
-  find_package(LAPACK)
 endif()
 
 file(GLOB FATODE_FILES *.F90)
