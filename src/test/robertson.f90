@@ -105,12 +105,12 @@ PROGRAM RUNEXAMPLE1
   ! call cpu_time(time2)
   ! write(*,Format) 'dvode', time2-time1, Y(:)
 
-  ! call setup_odesolver(N=neq,solver='dvodef90',RT=RT,AT=AT)
-  ! call initialize
-  ! call cpu_time(time1)
-  ! call run_odesolver(neq,T,TOUT,Y,Fgeneral)
-  ! call cpu_time(time2)
-  ! write(*,Format) 'dvodef90', time2-time1, Y(:)
+  call setup_odesolver(N=neq,solver='dvodef90',RT=RT,AT=AT)
+  call initialize
+  call cpu_time(time1)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
+  call cpu_time(time2)
+  write(*,Format) 'dvodef90', time2-time1, Y(:)
 
 # if defined(__GFORTRAN__)
   call setup_odesolver(N=neq,solver='lsoda',RT=RT,AT=AT)
@@ -121,54 +121,54 @@ PROGRAM RUNEXAMPLE1
   write(*,Format) 'lsoda', time2-time1, Y(:)
 # endif
 
-  call setup_odesolver(N=neq,solver='Hradau5',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='H-radau5',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
   call cpu_time(time2)
-  write(*,Format) 'Hradau5', time2-time1, Y(:)
+  write(*,Format) 'H-radau5', time2-time1, Y(:)
 
-  ! call setup_odesolver(N=neq,solver='radau',RT=RT,AT=AT)
-  ! call initialize
-  ! call cpu_time(time1)
-  ! call run_odesolver(neq,T,TOUT,Y,Fgeneral)
-  ! call cpu_time(time2)
-  ! write(*,Format) 'radau', time2-time1, Y(:)
-
-  call setup_odesolver(N=neq,solver='rk',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='H-radau',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
   call cpu_time(time2)
-  write(*,Format) 'rk', time2-time1, Y(:)
+  write(*,Format) 'H-radau', time2-time1, Y(:)
 
-  call setup_odesolver(N=neq,solver='Hrodas',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='radau2a',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
   call cpu_time(time2)
-  write(*,Format) 'Hrodas', time2-time1, Y(:)
+  write(*,Format) 'radau2a', time2-time1, Y(:)
 
-  call setup_odesolver(N=neq,solver='ros',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='H-rodas',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
   call cpu_time(time2)
-  write(*,Format) 'ros', time2-time1, Y(:)
+  write(*,Format) 'H-rodas', time2-time1, Y(:)
 
-  call setup_odesolver(N=neq,solver='Hsdirk4',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='rodas3',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
   call cpu_time(time2)
-  write(*,Format) 'Hsdirk4', time2-time1, Y(:)
+  write(*,Format) 'rodas3', time2-time1, Y(:)
 
-  call setup_odesolver(N=neq,solver='sdirk4',RT=RT,AT=AT)
+  call setup_odesolver(N=neq,solver='H-sdirk4',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
   call cpu_time(time2)
-  write(*,Format) 'sdirk', time2-time1, Y(:)
+  write(*,Format) 'H-sdirk4', time2-time1, Y(:)
+
+  call setup_odesolver(N=neq,solver='sdirk4b',RT=RT,AT=AT)
+  call initialize
+  call cpu_time(time1)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
+  call cpu_time(time2)
+  write(*,Format) 'sdirk4b', time2-time1, Y(:)
 
 # if defined(INTEL)
   call setup_odesolver(N=neq,solver='dodesol',RT=RT,AT=AT)
@@ -176,7 +176,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,JAC,err)
   call cpu_time(time2)
-  write(*,Format) 'intel', time2-time1, Y(:)
+  write(*,Format) 'dodesol', time2-time1, Y(:)
 # endif
 
 contains
