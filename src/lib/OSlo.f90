@@ -54,7 +54,7 @@ module oslo
   implicit none
   private
   public :: setup_odesolver
-  public :: run_odesolver, wrap_ros_FATODE
+  public :: run_odesolver
 
   !> Concrete procedure pointing to one of the subroutine realizations
   procedure(wrapper_if), pointer :: run_odesolver
@@ -505,7 +505,7 @@ subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,jac,err)
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
   integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
    
-  ICNTRL  = 0!IWORK_global
+  ICNTRL  = IWORK_global
   RCNTRL  = 0.0
   RSTATUS = 0.0
   ISTATUS = 0

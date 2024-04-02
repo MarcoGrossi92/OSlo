@@ -1,7 +1,6 @@
 #ifdef FULL_ALGEBRA
 module ls_solver_ros
       implicit none
-      integer :: nvar
       type LSdata
         double precision, allocatable :: fjac(:,:),e(:,:)
         integer, allocatable :: ip(:)
@@ -9,10 +8,10 @@ module ls_solver_ros
 
 contains
 
-      subroutine lss_decomp(data,hgamma,ising)
+      subroutine lss_decomp(nvar,data,hgamma,ising)
       implicit none
       type(LSdata) :: data
-      integer :: ising, i, j
+      integer :: ising, i, j, nvar
       double precision :: hgamma
       external :: dgetrf
       ! prepare left hand side
@@ -26,11 +25,11 @@ contains
       call dgetrf( nvar, nvar, data%e, nvar, data%ip, ising )
       end subroutine lss_decomp
 
-      subroutine lss_solve(data,rhs)
+      subroutine lss_solve(nvar,data,rhs)
       implicit none
       type(LSdata) :: data
       double precision ::rhs(nvar)
-      integer :: ising
+      integer :: ising, nvar
       external :: dgetrs
       call dgetrs( 'n', nvar, 1, data%e, nvar, data%ip, rhs, nvar, ising)
       end subroutine lss_solve
@@ -41,8 +40,7 @@ contains
       type(LSdata) :: data
       integer :: n,state
       integer :: nn ! necessary only for standardize the subroutine
-      nvar = n
-      allocate(data%ip(nvar),data%fjac(nvar,nvar),data%e(nvar,nvar),STAT = state)
+      allocate(data%ip(n),data%fjac(n,n),data%e(n,n),STAT = state)
       if(state .ne. 0)stop 'Allocation error in lapack_init'
       end subroutine lss_init
    
@@ -54,9 +52,10 @@ contains
       if(state .ne.0) stop 'Deallocation error in lapack_free'
       end subroutine lss_free
 
-      subroutine lss_jac(data,t,y,jac)
+      subroutine lss_jac(nvar,data,t,y,jac)
       implicit none
       type(LSdata) :: data
+      integer :: nvar
       double precision :: t, y(nvar)
       external :: jac
       call jac(nvar,t,y,data%fjac)

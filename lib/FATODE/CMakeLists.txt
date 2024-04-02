@@ -17,3 +17,8 @@ else()
   file(GLOB FATODE_LAPACK_FILES lapack/*.f)
   add_library(fatode ${FATODE_FILES} ${FATODE_LAPACK_FILES})
 endif()
+IF(USE_OPENMP)
+  SET_TARGET_PROPERTIES(fatode PROPERTIES
+                        COMPILE_FLAGS "${OpenMP_Fortran_FLAGS}"
+                        LINK_FLAGS "${OpenMP_Fortran_FLAGS}")
+ENDIF()

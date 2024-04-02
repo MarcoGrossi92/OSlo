@@ -17,7 +17,6 @@
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 
 MODULE ROS_f90_Integrator
-use omp_lib
 
   IMPLICIT NONE
   
@@ -219,8 +218,9 @@ SUBROUTINE Rosenbrock(N,NNZERO,Y,Tstart,Tend, &
    INTEGER,       INTENT(INOUT) :: ISTATUS(20)
    DOUBLE PRECISION, INTENT(INOUT) :: RSTATUS(20)
    INTEGER, INTENT(OUT)   :: IERR
-   DOUBLE PRECISION DLAMCH
+   DOUBLE PRECISION, EXTERNAL :: DLAMCH
    EXTERNAL FUN,JAC
+   EXTERNAL :: DCOPY, DAXPY, DGETRF, DGETRS, DSCAL
 !~~~>  LS Solver data
    TYPE(LSdata) :: lssdata
 !~~~>  Parameters of the Rosenbrock method, up to 6 stages
@@ -528,7 +528,7 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff < ZERO) &
 
 !~~~>   Compute the Jacobian at current time
 !   CALL JAC(T,Y,Jac0)
-   CALL LSS_Jac(lssdata,T,Y,JAC)
+   CALL LSS_Jac(N,lssdata,T,Y,JAC)
    ISTATUS(Njac) = ISTATUS(Njac) + 1
 
 !~~~>  Repeat step calculation until current step accepted
@@ -572,7 +572,7 @@ Stage: DO istage = 1, ros_S
          HG = Direction*H*ros_Gamma(istage)
          CALL DAXPY(N,HG,dFdT,1,K(ioffset+1),1)
        END IF
-       CALL LSS_Solve(lssdata,K(ioffset+1))      
+       CALL LSS_Solve(N,lssdata,K(ioffset+1))      
 !       CALL ros_Solve(Ghimj, Pivot, K(ioffset+1))
 
    END DO Stage
@@ -726,7 +726,7 @@ Stage: DO istage = 1, ros_S
 !     CALL DCOPY(N*N,Jac0,1,Ghimj,1)
 !     CALL DSCAL(N*N,(-ONE),Ghimj,1)
      ghinv = ONE/(Direction*H*gam)
-     call LSS_Decomp(lssdata,ghinv,ising)
+     call LSS_Decomp(N,lssdata,ghinv,ising)
 !     DO i=1,N
 !       Ghimj(i,i) = Ghimj(i,i)+ghinv
 !     END DO
