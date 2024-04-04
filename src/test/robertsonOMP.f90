@@ -54,33 +54,6 @@ CONTAINS
   end subroutine Fodepack
 # endif
 
-  SUBROUTINE JAC(NVAR,T, V, JF)
-    IMPLICIT NONE
-    integer :: NVAR
-    real(8) :: V(NVAR), T
-    real(8) :: JF(NVAR,NVAR)
-    real(8) :: UROUND, YSAFE, DELY
-    real(8) :: DER(NVAR), DER0(NVAR)
-    integer :: I,J
-
-    JF(:,:) = 0.0d0
-    UROUND = 1D-19
-    
-    DO I = 1, NVAR
-      YSAFE=V(I)
-      CALL Fgeneral(NVAR,T,V,DER0)
-      DELY=DSQRT(UROUND*MAX(1.D-5,ABS(YSAFE)))
-      V(I)=YSAFE+DELY
-      CALL Fgeneral(NVAR,T,V,DER)
-      DO J = 1, NVAR
-        JF(J,I)=(DER(J)-DER0(J))/DELY
-      ENDDO
-      V(I)=YSAFE
-    ENDDO
-
-  END SUBROUTINE JAC
-
-
 END MODULE functions
 
 
@@ -120,7 +93,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -140,7 +113,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fodepack,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fodepack,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -160,7 +133,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -179,7 +152,7 @@ PROGRAM RUNEXAMPLE1
   ! !$omp do schedule(dynamic)
   ! do i = 1, nc
   !   T = 0.0D0; TOUT = tlimit
-  !   call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+  !   call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   ! enddo
   ! !$omp enddo
   ! !$omp end parallel
@@ -197,7 +170,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -216,7 +189,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -235,7 +208,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -254,7 +227,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -273,7 +246,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -293,7 +266,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,jac,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
   enddo
   !$omp enddo
   !$omp end parallel

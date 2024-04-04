@@ -20,7 +20,7 @@ MODULE SDIRK_f90_Integrator
      ! Arguments 
       INTEGER, PARAMETER :: Nfun=1, Njac=2, Nstp=3, Nacc=4,  &
                Nrej=5, Ndec=6, Nsol=7, Nsng=8,               &
-               Ntexit=1, Nhexit=2, Nhnew=3
+               Ntexit=1, Nhexit=2, Nhnew=3, Npassjac=1
 CONTAINS
 SUBROUTINE INTEGRATE_SDIRK( TIN, TOUT, N, NNZERO, VAR, RTOL, ATOL, FUN, JAC, &
   ICNTRL_U, RCNTRL_U, ISTATUS_U, RSTATUS_U, Ierr_U )
@@ -239,7 +239,7 @@ SUBROUTINE INTEGRATE_SDIRK( TIN, TOUT, N, NNZERO, VAR, RTOL, ATOL, FUN, JAC, &
       DOUBLE PRECISION DLAMCH
       EXTERNAL FUN,JAC
 
-      type(LSdata) :: data
+      type(LSdata) :: lssdata
 
       rkA = ZERO
       rkB = ZERO
@@ -418,11 +418,11 @@ SUBROUTINE INTEGRATE_SDIRK( TIN, TOUT, N, NNZERO, VAR, RTOL, ATOL, FUN, JAC, &
       END IF
     
     IF (Ierr < 0) RETURN
-    CALL LSS_Init(data,N,NNZERO)
+    CALL LSS_Init(lssdata,N,NNZERO)
 
     CALL SDIRK_Integrator( N,Tinitial,Tfinal,Y,FUN,JAC,Ierr )
 
-    CALL LSS_Free(data)
+    CALL LSS_Free(lssdata)
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    CONTAINS  !  PROCEDURES INTERNAL TO SDIRK
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -751,6 +751,11 @@ accept: IF ( Err < ONE ) THEN !~~~> Step is accepted
 
       DOUBLE PRECISION             :: HGammaInv
       INTEGER                      :: ConsecutiveSng
+      !~~~>  Local data to compite Jacobian
+      DOUBLE PRECISION :: DER(N), DER0(N), YDUMMY(N)
+      DOUBLE PRECISION, PARAMETER :: UROUND = 1d-19
+      DOUBLE PRECISION :: YSAFE, DELY
+      INTEGER :: I
 
       ConsecutiveSng = 0
       ISING = 1
@@ -764,11 +769,22 @@ Hloop: DO WHILE (ISING /= 0)
 !          SkipJac = .FALSE.
 !      ELSE
       IF (.NOT. SkipJac) THEN
-          CALL LSS_Jac(T,Y,JAC,data)
+        if (Npassjac==0) then
+          CALL LSS_Jac(T,Y,JAC,lssdata)
+        else
+          DO I = 1, N
+            YDUMMY=Y
+            CALL FUN(N,T,YDUMMY,DER0)
+            DELY=DSQRT(UROUND*MAX(1.D-5,ABS(YDUMMY(I))))
+            YDUMMY(I)=YDUMMY(I)+DELY
+            CALL FUN(N,T,YDUMMY,DER)
+            lssdata%fjac(:,I)=(DER-DER0)/DELY
+          ENDDO
+        endif
           ISTATUS(Njac) = ISTATUS(Njac) + 1
       END IF  
 
-      CALL LSS_Decomp(data,HGammaInv,ISING)
+      CALL LSS_Decomp(lssdata,HGammaInv,ISING)
 
       ISTATUS(Ndec) = ISTATUS(Ndec) + 1
 
@@ -804,7 +820,7 @@ Hloop: DO WHILE (ISING /= 0)
       HGammaInv = ONE/(H*rkGamma)
       CALL DSCAL(N,HGammaInv,RHS,1)
  
-      CALL LSS_Solve(data,RHS)
+      CALL LSS_Solve(lssdata,RHS)
 !      CALL DGETRS( 'N', N, 1, E, N, IP, RHS, N, ISING )
 
       ISTATUS(Nsol) = ISTATUS(Nsol) + 1

@@ -23,7 +23,8 @@ MODULE ROS_f90_Integrator
 !~~~>  Statistics on the work performed by the Rosenbrock method
   INTEGER, PARAMETER :: Nfun=1, Njac=2, Nstp=3, Nacc=4, &
                         Nrej=5, Ndec=6, Nsol=7, Nsng=8, &
-                        Ntexit=1, Nhexit=2, Nhnew = 3
+                        Ntexit=1, Nhexit=2, Nhnew = 3,  &
+                        Npassjac=1
 
 CONTAINS
 
@@ -474,9 +475,11 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !~~~>  Local parameters
    DOUBLE PRECISION, PARAMETER :: ZERO = 0.0, ONE  = 1.0
    DOUBLE PRECISION, PARAMETER :: DeltaMin = 1.0E-5
-!~~~>  Locally called functions
-!    DOUBLE PRECISION WLAMCH
-!    EXTERNAL WLAMCH
+!~~~>  Local data to compite Jacobian
+   DOUBLE PRECISION :: DER(N), DER0(N)
+   DOUBLE PRECISION, PARAMETER :: UROUND = 1d-19
+   DOUBLE PRECISION :: YSAFE, DELY
+   INTEGER :: I
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -528,7 +531,19 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff < ZERO) &
 
 !~~~>   Compute the Jacobian at current time
 !   CALL JAC(T,Y,Jac0)
-   CALL LSS_Jac(N,lssdata,T,Y,JAC)
+   if (Npassjac==0) then
+     CALL LSS_Jac(N,lssdata,T,Y,JAC)
+   else
+      DO I = 1, N
+         YSAFE=Y(I)
+         CALL FUN(N,T,Y,DER0)
+         DELY=DSQRT(UROUND*MAX(1.D-5,ABS(YSAFE)))
+         Y(I)=YSAFE+DELY
+         CALL FUN(N,T,Y,DER)
+         lssdata%fjac(:,I)=(DER-DER0)/DELY
+         Y(I)=YSAFE
+      ENDDO
+   endif
    ISTATUS(Njac) = ISTATUS(Njac) + 1
 
 !~~~>  Repeat step calculation until current step accepted

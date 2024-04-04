@@ -20,7 +20,7 @@ MODULE RK_f90_Integrator
   IMPLICIT NONE
 
 !~~~>  Statistics on the work performed by the Runge-Kutta method
-  INTEGER, PARAMETER :: Nfun=1, Njac=2, Nstp=3, Nacc=4, Npassjac=0, &
+  INTEGER, PARAMETER :: Nfun=1, Njac=2, Nstp=3, Nacc=4, Npassjac=1, &
     Nrej=5, Ndec=6, Nsol=7, Nsng=8, Ntexit=1, Nhacc=2, Nhnew=3
   
 CONTAINS
@@ -476,6 +476,10 @@ CONTAINS
                  Hratio, Qnewton, NewtonPredictedErr,NewtonIncrementOld, ThetaSD
       INTEGER :: NewtonIter, ISING, Nconsecutive
       LOGICAL :: Reject, FirstStep, SkipJac, NewtonDone, SkipLU
+      DOUBLE PRECISION :: DER(N), DER0(N)
+      DOUBLE PRECISION, PARAMETER :: UROUND = 1d-19
+      DOUBLE PRECISION :: YSAFE, DELY
+      INTEGER :: I
       
             
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -514,7 +518,15 @@ Tloop: DO WHILE ( (Tend-T)*Tdirection - Roundoff > ZERO )
           if (Npassjac==0) then
             CALL LSS_Jac(T,Y,JAC,data)
           else
-            call LSS_Jac(T,Y,numJAC,data)
+            DO I = 1, N
+              YSAFE=Y(I)
+              CALL FUN(N,T,Y,DER0)
+              DELY=DSQRT(UROUND*MAX(1.D-5,ABS(YSAFE)))
+              Y(I)=YSAFE+DELY
+              CALL FUN(N,T,Y,DER)
+              data%fjac(:,I)=(DER-DER0)/DELY
+              Y(I)=YSAFE
+            ENDDO
           endif
           ISTATUS(Njac) = ISTATUS(Njac) + 1
         END IF
@@ -1740,32 +1752,6 @@ firej:IF (FirstStep.OR.Reject) THEN
       rkAinvT(3,3) = -3.508761919567443321903661209182446d0
 
   END SUBROUTINE Lobatto3A_Coefficients
-
-
-  SUBROUTINE numJAC(NVAR,T, V, JF)
-    IMPLICIT NONE
-    integer :: NVAR
-    real(8) :: V(NVAR), T
-    real(8) :: JF(NVAR,NVAR)
-    real(8) :: UROUND, YSAFE, DELY
-    real(8) :: DER(NVAR), DER0(NVAR)
-    integer :: I,J
-
-    JF(:,:) = 0.0d0
-    UROUND = 1D-19
-    
-    DO I = 1, NVAR
-     YSAFE=V(I)
-     CALL FUN(NVAR,T,V,DER0)
-     DELY=DSQRT(UROUND*MAX(1.D-5,ABS(YSAFE)))
-     V(I)=YSAFE+DELY
-     CALL FUN(NVAR,T,V,DER)
-     DO J = 1, NVAR
-        JF(J,I)=(DER(J)-DER0(J))/DELY
-     ENDDO
-     V(I)=YSAFE
-    ENDDO
-  END SUBROUTINE numJAC
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   END SUBROUTINE RungeKutta ! and all its internal procedures

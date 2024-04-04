@@ -61,14 +61,14 @@ module oslo
 
   !> Abstract interface relative to the generic procedure
   abstract interface
-  subroutine wrapper_if(n,t1,t2,var,fcn,jac,err)
+  subroutine wrapper_if(n,t1,t2,var,fcn,err)
     use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
     implicit none
     integer, intent(in)     :: n
     real(R8), intent(inout) :: t1, t2
     real(R8), intent(inout) :: var(n)
     integer, intent(out)    :: err
-    external :: fcn, jac
+    external :: fcn
   end subroutine wrapper_if
   end interface
 
@@ -214,12 +214,12 @@ contains
 
 
 # if defined(INTEL)
-subroutine wrap_dodesol(n,t1,t2,var,fcn,jac,ierr)
+subroutine wrap_dodesol(n,t1,t2,var,fcn,ierr)
   integer, intent(in)     :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: ierr
-  external :: fcn, jac
+  external :: fcn
   ! specific
   external :: dodesol_mk52lfn
   real(R8) :: h
@@ -240,12 +240,12 @@ end subroutine wrap_dodesol
 # endif
 
 
-subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IDID)
+subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID)
   integer, intent(in)     :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: IDID
-  external :: fcn, jac
+  external :: fcn
   ! specific
   external :: SDIRK4
   real(R8) :: h
@@ -279,12 +279,12 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IDID)
 end subroutine wrap_sdirk4
 
 
-subroutine wrap_radau5(n,t1,t2,var,fcn,jac,IDID)
+subroutine wrap_radau5(n,t1,t2,var,fcn,IDID)
   integer, intent(in)     :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: IDID
-  external :: fcn, jac
+  external :: fcn
   ! specific
   external :: RADAU5
   real(R8) :: h
@@ -364,12 +364,12 @@ end subroutine wrap_radau5
 ! end subroutine wrap_radau
 
 
-subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IDID)
+subroutine wrap_rodas(n,t1,t2,var,fcn,IDID)
   integer, intent(in)     :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: IDID
-  external :: fcn, jac
+  external :: fcn
   ! specific
   external :: RODAS
   real(R8) :: h
@@ -403,14 +403,14 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IDID)
 end subroutine wrap_rodas
 
 
-subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,jac,err)
+subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err)
   use DVODE_F90_M
   implicit none
   integer, intent(in) :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out) :: err
-  external :: fcn, jac
+  external :: fcn
   ! specific
   integer :: ITASK, ISTATE
   TYPE (VODE_OPTS) :: OPTIONS
@@ -450,14 +450,14 @@ end subroutine wrap_dvodef90OMP
 ! end subroutine wrap_dvode
 
 #if defined(__GFORTRAN__)
-subroutine wrap_odepack(n,t1,t2,var,fcn,jac,err)
+subroutine wrap_odepack(n,t1,t2,var,fcn,err)
   use odepack_mod
   implicit none
   integer, intent(in) :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: err
-  external :: fcn, jac
+  external :: fcn
   ! specific
   type(lsoda_class) :: eq
   integer :: itask, istate
@@ -472,14 +472,14 @@ end subroutine wrap_odepack
 #endif
 
 
-subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,jac,err)
+subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err)
   use SDIRK_f90_Integrator
   implicit none
   integer, intent(in)     :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: err
-  external :: fcn, jac
+  external :: fcn
 
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
   integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
@@ -487,20 +487,20 @@ subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,jac,err)
   ICNTRL  = IWORK_global
   RCNTRL  = 0.0
   
-  call SDIRK(N,NNZERO,T1,T2,VAR,RTOL,ATOL,fcn,JAC,  &
+  call SDIRK(N,NNZERO,T1,T2,VAR,RTOL,ATOL,fcn,dummy,  &
              RCNTRL,ICNTRL,RSTATUS,ISTATUS,err)
 
 end subroutine wrap_sdirk_FATODE
 
 
-subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,jac,err)
+subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err)
   use ROS_f90_Integrator, only: Rosenbrock
   implicit none
   integer, intent(in)     :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: err
-  external :: fcn, jac
+  external :: fcn
 
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
   integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
@@ -511,20 +511,20 @@ subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,jac,err)
   ISTATUS = 0
 
   call Rosenbrock(N,NNZERO,VAR,T1,T2,   &
-          ATOL,RTOL, fcn, JAC,          &
+          ATOL,RTOL, fcn, dummy,        &
           RCNTRL,ICNTRL,RSTATUS,ISTATUS,err)
 
 end subroutine wrap_ros_FATODE
 
 
-subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,jac,err)
+subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err)
   use RK_f90_Integrator
   implicit none
   integer, intent(in)     :: n
   real(R8), intent(inout) :: t1, t2
   real(R8), intent(inout) :: var(n)
   integer, intent(out)    :: err
-  external :: fcn, jac
+  external :: fcn
 
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
   integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
@@ -532,7 +532,7 @@ subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,jac,err)
   ICNTRL  = IWORK_global
   RCNTRL  = 0.0
 
-  call RungeKutta(  N, NNZERO, T1, T2, VAR, RTOL, ATOL, fcn, JAC, &
+  call RungeKutta(  N, NNZERO, T1, T2, VAR, RTOL, ATOL, fcn, dummy, &
                     RCNTRL,ICNTRL,RSTATUS,ISTATUS,err )
 
   end subroutine wrap_rk_FATODE
