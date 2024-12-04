@@ -57,20 +57,34 @@ module oslo
   public :: run_odesolver
 
   !> Concrete procedure pointing to one of the subroutine realizations
-  procedure(wrapper_if), pointer :: run_odesolver
+  procedure(solver_if), pointer :: run_odesolver
+  procedure(solout_if), pointer :: solout
 
-  !> Abstract interface relative to the generic procedure
+  !> Abstract interfaces relative to the generic procedures
   abstract interface
-  subroutine wrapper_if(n,t1,t2,var,fcn,err)
+  subroutine solver_if(n,t1,t2,var,fcn,err,hmax)
     use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
     implicit none
-    integer, intent(in)     :: n
-    real(R8), intent(inout) :: t1, t2
-    real(R8), intent(inout) :: var(n)
-    integer, intent(out)    :: err
+    integer, intent(in)            :: n
+    real(R8), intent(inout)        :: t1, t2
+    real(R8), intent(inout)        :: var(n)
+    integer, intent(out)           :: err
+    real(R8), intent(in), optional :: hmax
     external :: fcn
-  end subroutine wrapper_if
+  end subroutine solver_if
   end interface
+
+  abstract interface
+    subroutine solout_if (NR,XOLD,X,Y,N,IRTRN)
+    use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
+      implicit none
+      integer  :: NR, N
+      real(R8) :: X, XOLD, Y(N)
+      integer  :: IRTRN
+    end subroutine solout_if
+  end interface
+
+  !> Module data
 
   real(R8), allocatable :: RTOL(:)
   real(R8), allocatable :: ATOL(:)
@@ -86,13 +100,14 @@ module oslo
 
 contains
 
-  subroutine setup_odesolver(N,solver,RT,AT,IOPT)
+  subroutine setup_odesolver(N,solver,RT,AT,IOPT,external_solout)
     implicit none
     integer, intent(in)            :: N
     character(len=*), intent(in)   :: solver
     real(R8), intent(in), optional :: RT(N), AT(N)
     integer, intent(in), optional  :: IOPT(NIOPT)
     integer :: Nsteps, Nnewt, icnt
+    procedure(solout_if), optional :: external_solout
 
     ! Tollerances are defined as arrays -> ITOL = 1 (Hairer); ITOL = 2 (DVODE)
     ITOL = 1
@@ -116,11 +131,6 @@ contains
     if (present(AT)) ATOL = AT
 
     select case(solver)
-    ! case('dvode')
-    !   ITOL = ITOL+1
-    !   LWORK = 22 +  9*N + 2*N**2
-    !   LIWORK= 30 + N
-    !   run_odesolver => wrap_dvode
     case('dvodef90')
       run_odesolver => wrap_dvodef90OMP
 #   if defined(__GFORTRAN__)
@@ -136,16 +146,6 @@ contains
       IWORK_global(3) = Nnewt
       IWORK_global(8) = icnt
       run_odesolver => wrap_radau5
-    ! case('H-radau')
-    !   NSMAX = 7
-    !   LWORK = (NSMAX+1)*N*N+(3*NSMAX+3)*N+20
-    !   LIWORK= (2+(NSMAX-1)/2)*N+20
-    !   allocate(IWORK_global(LIWORK))
-    !   IWORK_global = 0
-    !   IWORK_global(2) = Nsteps
-    !   IWORK_global(3) = Nnewt
-    !   IWORK_global(8) = icnt
-    !   run_odesolver => wrap_radau
     case('radau2a','lobatto3c','gauss','radau1a')
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
@@ -186,6 +186,11 @@ contains
       IWORK_global(2) = Nsteps
       IWORK_global(3) = Nnewt
       run_odesolver => wrap_sdirk4
+      if (present(external_solout)) then
+        solout => external_solout
+      else
+        solout => dummy_solout_sdirk
+      endif
     case('sdirk2a','sdirk2b','sdirk3a','sdirk4a','sdirk4b')
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
@@ -214,11 +219,12 @@ contains
 
 
 # if defined(INTEL)
-subroutine wrap_dodesol(n,t1,t2,var,fcn,ierr)
-  integer, intent(in)     :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: ierr
+subroutine wrap_dodesol(n,t1,t2,var,fcn,ierr,hmax)
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: ierr
+  real(R8), intent(in), optional :: hmax
   external :: fcn
   ! specific
   external :: dodesol_mk52lfn
@@ -240,12 +246,13 @@ end subroutine wrap_dodesol
 # endif
 
 
-subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID)
-  integer, intent(in)     :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: IDID
-  external :: fcn
+subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax)
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: IDID
+  real(R8), intent(in), optional :: hmax
+  external :: fcn, afcnout
   ! specific
   external :: SDIRK4
   real(R8) :: h
@@ -266,12 +273,13 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID)
   IWORK = IWORK_global
   WORK = 0d0
   WORK(1)=1.1d-19
+  if (present(hmax)) WORK(7) = hmax
 
-  call SDIRK4(n,fcn,t1,var,t2,H,                         &
+  call SDIRK4(n,fcn,t1,var,t2,H,                       &
                 RTOL,ATOL,ITOL,                        &
                 dummy,IJAC,MLJAC,MUJAC,                &
                 dummy,IMAS,MLMAS,MUMAS,                &
-                dummy,IOUT,                            &
+                solout,IOUT,                           &
                 WORK,LWORK,IWORK,LIWORK,LRCONT,IDID,   &
                 NN,NN2,NN3,NN4,XOLD,HSOL,RCONT,        &
                 NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL)
@@ -279,11 +287,12 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID)
 end subroutine wrap_sdirk4
 
 
-subroutine wrap_radau5(n,t1,t2,var,fcn,IDID)
-  integer, intent(in)     :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: IDID
+subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax)
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: IDID
+  real(R8), intent(in), optional :: hmax
   external :: fcn
   ! specific
   external :: RADAU5
@@ -308,6 +317,7 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID)
   IWORK = IWORK_global
   WORK = 0d0
   WORK(1)=1.1d-19
+  if (present(hmax)) WORK(7) = hmax
 
   RPAR=0d0
   IPAR=0
@@ -320,7 +330,7 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID)
                 RTOL_,ATOL_,ITOL,                       &
                 dummy,IJAC,MLJAC,MUJAC,                 &
                 dummy,IMAS,MLMAS,MUMAS,                 &
-                dummy,IOUT,                             &
+                dummy,IOUT,                            &
                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID, &
                 NN,NN2,NN3,NN4,XSOL,HSOL,C2M1,C1M1,     &
                 MLE,MUE,MBJAC,MBB,MDIAG,MDIFF,MBDIAG)
@@ -328,47 +338,12 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID)
 end subroutine wrap_radau5
 
 
-! subroutine wrap_radau(n,t1,t2,var,fcn,jac,IDID)
-!   integer, intent(in)     :: n
-!   real(R8), intent(inout) :: t1, t2
-!   real(R8), intent(inout) :: var(n)
-!   integer, intent(out)    :: IDID
-!   external :: fcn, jac
-!   ! specific
-!   external :: RADAU
-!   real(R8) :: h
-!   real(R8) :: WORK(LWORK)
-!   integer :: IWORK(LIWORK)
-!   real(R8) :: RPAR(1)=0d0
-!   integer :: IPAR(1)=0,IOUT
-
-!   h = 0.D0
-!   IJAC = 0
-!   IMAS = 0
-!   MLJAC = n
-!   MLMAS = n
-!   MUJAC = 0
-!   MUMAS = 0
-
-!   IWORK = 0
-!   WORK = 0d0
-!   WORK(1)=1.1d-19
-
-!   call RADAU(n,fcn,t1,var,t2,H,                                 &
-!                 RTOL,ATOL,ITOL,                                 &
-!                 dummy,IJAC,MLJAC,MUJAC,                         &
-!                 dummy,IMAS,MLMAS,MUMAS,                         &
-!                 dummy,IOUT,                                     &
-!                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
-
-! end subroutine wrap_radau
-
-
-subroutine wrap_rodas(n,t1,t2,var,fcn,IDID)
-  integer, intent(in)     :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: IDID
+subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax)
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: IDID
+  real(R8), intent(in), optional :: hmax
   external :: fcn
   ! specific
   external :: RODAS
@@ -392,24 +367,26 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID)
   IWORK = IWORK_global
   WORK = 0d0
   WORK(1)=1.1d-19
+  if (present(hmax)) WORK(2) = hmax
 
-  call RODAS(n,fcn,IFCN,t1,var,t2,H,                              &
-                RTOL,ATOL,ITOL,                                 &
-                dummy,IJAC,MLJAC,MUJAC,dummy,IDFX,              &
-                dummy,IMAS,MLMAS,MUMAS,                         &
-                dummy,IOUT,                                     &
+  call RODAS(n,fcn,IFCN,t1,var,t2,H,                   &
+                RTOL,ATOL,ITOL,                        &
+                dummy,IJAC,MLJAC,MUJAC,dummy,IDFX,     &
+                dummy,IMAS,MLMAS,MUMAS,                &
+                dummy,IOUT,                           &
                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
 
 end subroutine wrap_rodas
 
 
-subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err)
+subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err,hmax)
   use DVODE_F90_M
   implicit none
-  integer, intent(in) :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out) :: err
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: err
+  real(R8), intent(in), optional :: hmax
   external :: fcn
   ! specific
   integer :: ITASK, ISTATE
@@ -424,39 +401,15 @@ subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err)
 end subroutine wrap_dvodef90OMP
 
 
-! subroutine wrap_dvode(n,t1,t2,Z,fcn)
-!   implicit none
-!   integer, intent(in) :: n
-!   real(R8), intent(inout) :: t1, t2
-!   real(R8), intent(inout) :: Z(n)
-!   external :: fcn
-!   ! specific
-!   external :: dvode
-!   integer :: ITASK, ISTATE, MF, IOPT
-!   real(R8) :: WORK(LWORK)
-!   integer :: IWORK(LIWORK)
-!   integer :: IPAR(1)=0
-!   real(R8) :: RPAR(1)=0d0
-
-!   ITASK = 1
-!   ISTATE = 1
-!   IOPT = 0
-!   MF = 22
-
-!   call DVODE (fcn, n, z, t1, t2, ITOL, RTOL, ATOL, ITASK,          &
-!               ISTATE, IOPT, WORK, LWORK, IWORK, LIWORK, dummy, MF, &
-!               RPAR, IPAR)
-
-! end subroutine wrap_dvode
-
 #if defined(__GFORTRAN__)
-subroutine wrap_odepack(n,t1,t2,var,fcn,err)
+subroutine wrap_odepack(n,t1,t2,var,fcn,err,hmax)
   use odepack_mod
   implicit none
-  integer, intent(in) :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: err
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: err
+  real(R8), intent(in), optional :: hmax
   external :: fcn
   ! specific
   type(lsoda_class) :: eq
@@ -472,13 +425,14 @@ end subroutine wrap_odepack
 #endif
 
 
-subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err)
+subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax)
   use SDIRK_f90_Integrator
   implicit none
-  integer, intent(in)     :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: err
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: err
+  real(R8), intent(in), optional :: hmax
   external :: fcn
 
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
@@ -486,6 +440,8 @@ subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err)
    
   ICNTRL  = IWORK_global
   RCNTRL  = 0.0
+
+  if (present(hmax)) RCNTRL(2) = hmax
   
   call SDIRK(N,NNZERO,T1,T2,VAR,RTOL,ATOL,fcn,dummy,  &
              RCNTRL,ICNTRL,RSTATUS,ISTATUS,err)
@@ -493,13 +449,14 @@ subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err)
 end subroutine wrap_sdirk_FATODE
 
 
-subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err)
+subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax)
   use ROS_f90_Integrator, only: Rosenbrock
   implicit none
-  integer, intent(in)     :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: err
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: err
+  real(R8), intent(in), optional :: hmax
   external :: fcn
 
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
@@ -510,6 +467,8 @@ subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err)
   RSTATUS = 0.0
   ISTATUS = 0
 
+  if (present(hmax)) RCNTRL(2) = hmax
+
   call Rosenbrock(N,NNZERO,VAR,T1,T2,   &
           ATOL,RTOL, fcn, dummy,        &
           RCNTRL,ICNTRL,RSTATUS,ISTATUS,err)
@@ -517,13 +476,14 @@ subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err)
 end subroutine wrap_ros_FATODE
 
 
-subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err)
+subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax)
   use RK_f90_Integrator
   implicit none
-  integer, intent(in)     :: n
-  real(R8), intent(inout) :: t1, t2
-  real(R8), intent(inout) :: var(n)
-  integer, intent(out)    :: err
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: err
+  real(R8), intent(in), optional :: hmax
   external :: fcn
 
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
@@ -531,13 +491,24 @@ subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err)
    
   ICNTRL  = IWORK_global
   RCNTRL  = 0.0
+  if (present(hmax)) RCNTRL(2) = hmax
 
   call RungeKutta(  N, NNZERO, T1, T2, VAR, RTOL, ATOL, fcn, dummy, &
                     RCNTRL,ICNTRL,RSTATUS,ISTATUS,err )
 
-  end subroutine wrap_rk_FATODE
+end subroutine wrap_rk_FATODE
+
 
 subroutine dummy()
 endsubroutine
+
+subroutine dummy_solout_sdirk (NR,XOLD,X,Y,N,IRTRN)
+use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
+  implicit none
+  integer  :: NR, N
+  real(R8) :: X, XOLD, Y(N)
+  integer  :: IRTRN
+end subroutine dummy_solout_sdirk
+
 
 end module oslo
