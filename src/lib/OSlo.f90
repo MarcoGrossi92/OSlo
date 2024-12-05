@@ -58,11 +58,10 @@ module oslo
 
   !> Concrete procedure pointing to one of the subroutine realizations
   procedure(solver_if), pointer :: run_odesolver
-  procedure(solout_if), pointer :: solout
 
   !> Abstract interfaces relative to the generic procedures
   abstract interface
-  subroutine solver_if(n,t1,t2,var,fcn,err,hmax)
+  subroutine solver_if(n,t1,t2,var,fcn,err,hmax,solout)
     use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
     implicit none
     integer, intent(in)            :: n
@@ -70,11 +69,12 @@ module oslo
     real(R8), intent(inout)        :: var(n)
     integer, intent(out)           :: err
     real(R8), intent(in), optional :: hmax
+    procedure(solout_if), optional :: solout
     external :: fcn
   end subroutine solver_if
   end interface
 
-  abstract interface
+  interface
     subroutine solout_if (NR,XOLD,X,Y,N,IRTRN)
     use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
       implicit none
@@ -100,14 +100,13 @@ module oslo
 
 contains
 
-  subroutine setup_odesolver(N,solver,RT,AT,IOPT,external_solout)
+  subroutine setup_odesolver(N,solver,RT,AT,IOPT)
     implicit none
     integer, intent(in)            :: N
     character(len=*), intent(in)   :: solver
     real(R8), intent(in), optional :: RT(N), AT(N)
     integer, intent(in), optional  :: IOPT(NIOPT)
     integer :: Nsteps, Nnewt, icnt
-    procedure(solout_if), optional :: external_solout
 
     ! Tollerances are defined as arrays -> ITOL = 1 (Hairer); ITOL = 2 (DVODE)
     ITOL = 1
@@ -186,11 +185,6 @@ contains
       IWORK_global(2) = Nsteps
       IWORK_global(3) = Nnewt
       run_odesolver => wrap_sdirk4
-      if (present(external_solout)) then
-        solout => external_solout
-      else
-        solout => dummy_solout_sdirk
-      endif
     case('sdirk2a','sdirk2b','sdirk3a','sdirk4a','sdirk4b')
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
@@ -219,13 +213,14 @@ contains
 
 
 # if defined(INTEL)
-subroutine wrap_dodesol(n,t1,t2,var,fcn,ierr,hmax)
+subroutine wrap_dodesol(n,t1,t2,var,fcn,ierr,hmax,solout)
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: ierr
   real(R8), intent(in), optional :: hmax
   external :: fcn
+  procedure(solout_if), optional :: solout
   ! specific
   external :: dodesol_mk52lfn
   real(R8) :: h
@@ -246,13 +241,14 @@ end subroutine wrap_dodesol
 # endif
 
 
-subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax)
+subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: IDID
   real(R8), intent(in), optional :: hmax
-  external :: fcn, afcnout
+  procedure(solout_if), optional :: solout
+  external :: fcn
   ! specific
   external :: SDIRK4
   real(R8) :: h
@@ -269,12 +265,16 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax)
   MLMAS = n
   MUJAC = 0
   MUMAS = 0
+  ! IOUT=0: solout is never called
+  ! IOUT=1: solout is available for output
+  IOUT = 1
 
   IWORK = IWORK_global
   WORK = 0d0
   WORK(1)=1.1d-19
   if (present(hmax)) WORK(7) = hmax
 
+  if (present(solout)) then
   call SDIRK4(n,fcn,t1,var,t2,H,                       &
                 RTOL,ATOL,ITOL,                        &
                 dummy,IJAC,MLJAC,MUJAC,                &
@@ -283,16 +283,27 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax)
                 WORK,LWORK,IWORK,LIWORK,LRCONT,IDID,   &
                 NN,NN2,NN3,NN4,XOLD,HSOL,RCONT,        &
                 NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL)
+  else
+  call SDIRK4(n,fcn,t1,var,t2,H,                       &
+                RTOL,ATOL,ITOL,                        &
+                dummy,IJAC,MLJAC,MUJAC,                &
+                dummy,IMAS,MLMAS,MUMAS,                &
+                dummy,IOUT,                           &
+                WORK,LWORK,IWORK,LIWORK,LRCONT,IDID,   &
+                NN,NN2,NN3,NN4,XOLD,HSOL,RCONT,        &
+                NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL)
+  endif
 
 end subroutine wrap_sdirk4
 
 
-subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax)
+subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax,solout)
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: IDID
   real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
   external :: fcn
   ! specific
   external :: RADAU5
@@ -313,6 +324,7 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax)
   MLMAS = n
   MUJAC = 0
   MUMAS = 0
+  IOUT = 0
 
   IWORK = IWORK_global
   WORK = 0d0
@@ -338,12 +350,13 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax)
 end subroutine wrap_radau5
 
 
-subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax)
+subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: IDID
   real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
   external :: fcn
   ! specific
   external :: RODAS
@@ -363,6 +376,7 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax)
   MLMAS = n
   MUJAC = 0
   MUMAS = 0
+  IOUT = 0
   
   IWORK = IWORK_global
   WORK = 0d0
@@ -379,7 +393,7 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax)
 end subroutine wrap_rodas
 
 
-subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err,hmax)
+subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err,hmax,solout)
   use DVODE_F90_M
   implicit none
   integer, intent(in)            :: n
@@ -387,6 +401,7 @@ subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err,hmax)
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
   external :: fcn
   ! specific
   integer :: ITASK, ISTATE
@@ -402,7 +417,7 @@ end subroutine wrap_dvodef90OMP
 
 
 #if defined(__GFORTRAN__)
-subroutine wrap_odepack(n,t1,t2,var,fcn,err,hmax)
+subroutine wrap_odepack(n,t1,t2,var,fcn,err,hmax,solout)
   use odepack_mod
   implicit none
   integer, intent(in)            :: n
@@ -410,6 +425,7 @@ subroutine wrap_odepack(n,t1,t2,var,fcn,err,hmax)
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
   external :: fcn
   ! specific
   type(lsoda_class) :: eq
@@ -425,7 +441,7 @@ end subroutine wrap_odepack
 #endif
 
 
-subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax)
+subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
   use SDIRK_f90_Integrator
   implicit none
   integer, intent(in)            :: n
@@ -433,8 +449,9 @@ subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax)
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
   external :: fcn
-
+  ! specific
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
   integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
    
@@ -449,7 +466,7 @@ subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax)
 end subroutine wrap_sdirk_FATODE
 
 
-subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax)
+subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
   use ROS_f90_Integrator, only: Rosenbrock
   implicit none
   integer, intent(in)            :: n
@@ -457,8 +474,9 @@ subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax)
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
   external :: fcn
-
+  ! specific
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
   integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
    
@@ -476,7 +494,7 @@ subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax)
 end subroutine wrap_ros_FATODE
 
 
-subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax)
+subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
   use RK_f90_Integrator
   implicit none
   integer, intent(in)            :: n
@@ -484,8 +502,9 @@ subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax)
   real(R8), intent(inout)        :: var(n)
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
   external :: fcn
-
+  ! specific
   real(R8) :: RCNTRL(NNZERO+1), RSTATUS(NNZERO+1)
   integer  :: ICNTRL(NNZERO+1), ISTATUS(NNZERO+1)
    
@@ -501,14 +520,6 @@ end subroutine wrap_rk_FATODE
 
 subroutine dummy()
 endsubroutine
-
-subroutine dummy_solout_sdirk (NR,XOLD,X,Y,N,IRTRN)
-use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
-  implicit none
-  integer  :: NR, N
-  real(R8) :: X, XOLD, Y(N)
-  integer  :: IRTRN
-end subroutine dummy_solout_sdirk
 
 
 end module oslo
