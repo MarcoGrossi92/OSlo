@@ -49,6 +49,21 @@
 ! 5) max number of newton iterations
 ! 6) choice of newton initial value
 
+module interface_definitions
+  implicit none
+
+  interface
+    subroutine solout_if(NR, XOLD, X, Y, N, IRTRN)
+      use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
+      implicit none
+      integer  :: NR, N
+      real(R8) :: X, XOLD, Y(N)
+      integer  :: IRTRN
+    end subroutine solout_if
+  end interface
+
+end module interface_definitions
+
 module oslo
   use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
   implicit none
@@ -59,29 +74,19 @@ module oslo
   !> Concrete procedure pointing to one of the subroutine realizations
   procedure(solver_if), pointer :: run_odesolver
 
-  !> Abstract interfaces relative to the generic procedures
   abstract interface
-  subroutine solver_if(n,t1,t2,var,fcn,err,hmax,solout)
-    use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
-    implicit none
-    integer, intent(in)            :: n
-    real(R8), intent(inout)        :: t1, t2
-    real(R8), intent(inout)        :: var(n)
-    integer, intent(out)           :: err
-    real(R8), intent(in), optional :: hmax
-    procedure(solout_if), optional :: solout
-    external :: fcn
-  end subroutine solver_if
-  end interface
-
-  interface
-    subroutine solout_if (NR,XOLD,X,Y,N,IRTRN)
-    use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
+    subroutine solver_if(n, t1, t2, var, fcn, err, hmax, solout)
+      use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
+      use interface_definitions, only : solout_if
       implicit none
-      integer  :: NR, N
-      real(R8) :: X, XOLD, Y(N)
-      integer  :: IRTRN
-    end subroutine solout_if
+      integer, intent(in)            :: n
+      real(R8), intent(inout)        :: t1, t2
+      real(R8), intent(inout)        :: var(n)
+      integer, intent(out)           :: err
+      real(R8), intent(in), optional :: hmax
+      procedure(solout_if), optional :: solout
+      external :: fcn
+    end subroutine solver_if
   end interface
 
   !> Module data
@@ -214,6 +219,8 @@ contains
 
 # if defined(INTEL)
 subroutine wrap_dodesol(n,t1,t2,var,fcn,ierr,hmax,solout)
+  use interface_definitions, only : solout_if
+  implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
@@ -242,6 +249,8 @@ end subroutine wrap_dodesol
 
 
 subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
+  use interface_definitions, only : solout_if
+  implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
@@ -298,6 +307,8 @@ end subroutine wrap_sdirk4
 
 
 subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax,solout)
+  use interface_definitions, only : solout_if
+  implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
@@ -351,6 +362,8 @@ end subroutine wrap_radau5
 
 
 subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
+  use interface_definitions, only : solout_if
+  implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
@@ -395,6 +408,7 @@ end subroutine wrap_rodas
 
 subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err,hmax,solout)
   use DVODE_F90_M
+  use interface_definitions, only : solout_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
@@ -419,6 +433,7 @@ end subroutine wrap_dvodef90OMP
 #if defined(__GFORTRAN__)
 subroutine wrap_odepack(n,t1,t2,var,fcn,err,hmax,solout)
   use odepack_mod
+  use interface_definitions, only : solout_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
@@ -443,6 +458,7 @@ end subroutine wrap_odepack
 
 subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
   use SDIRK_f90_Integrator
+  use interface_definitions, only : solout_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
@@ -468,6 +484,7 @@ end subroutine wrap_sdirk_FATODE
 
 subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
   use ROS_f90_Integrator, only: Rosenbrock
+  use interface_definitions, only : solout_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
@@ -496,6 +513,7 @@ end subroutine wrap_ros_FATODE
 
 subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
   use RK_f90_Integrator
+  use interface_definitions, only : solout_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
