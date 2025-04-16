@@ -13,8 +13,15 @@ foreach(TEST ${TESTS})
           $<BUILD_INTERFACE:${CMAKE_Fortran_MODULE_DIRECTORY}>
   )
   IF(USE_OPENMP)
-      SET_TARGET_PROPERTIES(${EXE_NAME} PROPERTIES
-                            COMPILE_FLAGS "${OpenMP_Fortran_FLAGS}"
-                            LINK_FLAGS "${OpenMP_Fortran_FLAGS}")
+    SET_TARGET_PROPERTIES(${EXE_NAME} PROPERTIES
+                          COMPILE_FLAGS "${OpenMP_Fortran_FLAGS}"
+                          LINK_FLAGS "${OpenMP_Fortran_FLAGS}")
   ENDIF(USE_OPENMP)
+  IF(USE_MPI)
+    SET_TARGET_PROPERTIES(${EXE_NAME} PROPERTIES
+                          COMPILE_FLAGS "${MPI_Fortran_COMPILE_FLAGS}"
+                          LINK_FLAGS "${MPI_Fortran_LINK_FLAGS}")
+    INCLUDE_DIRECTORIES(${MPI_Fortran_INCLUDE_PATH})
+    TARGET_LINK_LIBRARIES(${EXE_NAME} ${MPI_Fortran_LIBRARIES})
+  ENDIF(USE_MPI)
 endforeach()
