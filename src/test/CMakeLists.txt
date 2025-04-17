@@ -7,21 +7,21 @@ foreach(TEST ${TESTS})
   get_filename_component(EXE_NAME ${TEST} NAME_WE)
   add_executable(${EXE_NAME} ${TEST})
   add_test(${EXE_NAME} ${EXECUTABLE_OUTPUT_PATH}/${EXE_NAME} COMMAND ${EXE_NAME} -stress)
-  target_link_libraries(${EXE_NAME} oslo)
+  target_link_libraries(${EXE_NAME} PRIVATE OSlo)
   target_include_directories(${EXE_NAME}
       INTERFACE
           $<BUILD_INTERFACE:${CMAKE_Fortran_MODULE_DIRECTORY}>
   )
-  IF(USE_OPENMP)
-    SET_TARGET_PROPERTIES(${EXE_NAME} PROPERTIES
-                          COMPILE_FLAGS "${OpenMP_Fortran_FLAGS}"
-                          LINK_FLAGS "${OpenMP_Fortran_FLAGS}")
-  ENDIF(USE_OPENMP)
-  IF(USE_MPI)
-    SET_TARGET_PROPERTIES(${EXE_NAME} PROPERTIES
-                          COMPILE_FLAGS "${MPI_Fortran_COMPILE_FLAGS}"
-                          LINK_FLAGS "${MPI_Fortran_LINK_FLAGS}")
-    INCLUDE_DIRECTORIES(${MPI_Fortran_INCLUDE_PATH})
-    TARGET_LINK_LIBRARIES(${EXE_NAME} ${MPI_Fortran_LIBRARIES})
-  ENDIF(USE_MPI)
+  if(USE_MPI)
+    target_compile_options(${EXE_NAME} PRIVATE ${MPI_Fortran_COMPILE_FLAGS})
+    target_link_options(${EXE_NAME} PRIVATE ${MPI_Fortran_LINK_FLAGS})
+    target_include_directories(${EXE_NAME} PRIVATE ${MPI_Fortran_INCLUDE_PATH})
+    target_link_libraries(${EXE_NAME} PRIVATE ${MPI_Fortran_LIBRARIES})
+  endif()
+
+  if(USE_OPENMP)
+    target_compile_options(${EXE_NAME} PRIVATE ${OpenMP_Fortran_FLAGS})
+    target_link_options(${EXE_NAME} PRIVATE ${OpenMP_Fortran_FLAGS})
+  endif()
+
 endforeach()
