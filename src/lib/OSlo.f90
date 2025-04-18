@@ -135,12 +135,15 @@ contains
     if (present(AT)) ATOL = AT
 
     select case(solver)
+
     case('dvodef90')
       run_odesolver => wrap_dvodef90OMP
+
 #   if defined(__GFORTRAN__)
     case('lsoda')
       run_odesolver => wrap_odepack
 #   endif
+
     case('H-radau5')
       LWORK=4*(n)*(n)+12*(n)+20
       LIWORK=3*n+20
@@ -150,6 +153,7 @@ contains
       IWORK_global(3) = Nnewt
       IWORK_global(8) = icnt
       run_odesolver => wrap_radau5
+
     case('radau2a','lobatto3c','gauss','radau1a')
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
@@ -162,6 +166,7 @@ contains
       if(solver=='gauss')IWORK_global(3)=3
       if(solver=='radau1a')IWORK_global(3)=4
       run_odesolver => wrap_rk_FATODE
+
     case('H-rodas')
       LWORK = 2*N*N+14*N+20
       LIWORK= N+20
@@ -171,6 +176,7 @@ contains
       IWORK_global(2) = Nnewt
       IWORK_global(3) = icnt
       run_odesolver => wrap_rodas
+
     case('ros2','ros3','ros4','rodas3','rodas4')
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
@@ -181,6 +187,7 @@ contains
       if(solver=='rodas3')IWORK_global(3)=4
       if(solver=='rodas4')IWORK_global(3)=5
       run_odesolver => wrap_ros_FATODE
+
     case('H-sdirk4')
       LWORK=2*N*N+12*N+7
       LIWORK=2*N+4
@@ -190,6 +197,7 @@ contains
       IWORK_global(2) = Nsteps
       IWORK_global(3) = Nnewt
       run_odesolver => wrap_sdirk4
+
     case('sdirk2a','sdirk2b','sdirk3a','sdirk4a','sdirk4b')
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
@@ -201,6 +209,7 @@ contains
       if(solver=='sdirk4a')IWORK_global(3)=4
       if(solver=='sdirk4b')IWORK_global(3)=5
       run_odesolver => wrap_sdirk_FATODE
+
 #   if defined(INTEL)
     case('dodesol')
       LWORK = (7+2*n)*n
@@ -209,9 +218,17 @@ contains
       IWORK_global = 0
       run_odesolver => wrap_dodesol
 #   endif
+
+    case('cvode')
+      allocate(IWORK_global(1))
+      IWORK_global = 10000
+      run_odesolver => wrap_cvode
+
     case default
+
       write(*,*) trim(solver), ' is not a valid integrator'
       stop
+
     end select
 
   end subroutine setup_odesolver
@@ -534,6 +551,117 @@ subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
                     RCNTRL,ICNTRL,RSTATUS,ISTATUS,err )
 
 end subroutine wrap_rk_FATODE
+
+
+subroutine wrap_cvode(n,t1,t2,var,fcn,err,hmax,solout)
+  use, intrinsic :: iso_c_binding
+  use fsundials_core_mod
+  use fcvode_mod                    ! Fortran interface to CVODE
+  use fnvector_serial_mod           ! Fortran interface to serial N_Vector
+  use fsunmatrix_dense_mod          ! Fortran interface to dense SUNMatrix
+  use fsunlinsol_dense_mod          ! Fortran interface to dense SUNLinearSolver
+  use fsunnonlinsol_newton_mod
+  use interface_definitions, only : solout_if
+  implicit none
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: err
+  real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
+  external :: fcn
+  ! specific
+  type(N_Vector), pointer :: sunvec_y      ! sundials solution vector
+  type(N_Vector), pointer :: sunvec_f      ! sundials solution vector
+  type(N_Vector), pointer :: sunvec_av     ! sundials tolerance vector
+  type(SUNMatrix), pointer :: sunmat_A      ! sundials matrix
+  type(SUNLinearSolver), pointer :: sunlinsol_LS  ! sundials linear solver
+  type(SUNNonLinearSolver), pointer :: sunnonlin_NLS ! sundials nonlinear solver
+  type(c_ptr)                       :: cvode_mem     ! CVode memory
+  type(c_ptr)                       :: sunctx        ! SUNDIALS simulation context
+  real(R8)                          :: fval(n), tret(1)
+  integer(c_int)                    :: retval
+  integer(c_int64_t)                :: neq
+
+  neq = int(n, c_int64_t)
+
+  retval = FSUNContext_Create(SUN_COMM_NULL, sunctx)
+
+  sunvec_y => FN_VMake_Serial(neq, var, sunctx)
+  sunvec_f => FN_VMake_Serial(neq, fval, sunctx)
+  sunvec_av => FN_VMake_Serial(neq, ATOL, sunctx)
+
+  ! Call FCVodeCreate and FCVodeInit to create and initialize CVode memory
+  cvode_mem = FCVodeCreate(CV_BDF, sunctx)
+  retval = FCVodeInit(cvode_mem, c_funloc(cvodefcn), t1, sunvec_y)
+
+  ! Set tolerances and maxstep
+  retval = FCVodeSVtolerances(cvode_mem, RTOL(1), sunvec_av)
+  retval = FCVodeSetMaxNumSteps(cvode_mem, int(IWORK_global(1), c_long))
+
+  ! Create dense SUNMatrix for use in linear solves
+  sunmat_A => FSUNDenseMatrix(neq, neq, sunctx)
+  ! Create dense SUNLinearSolver object
+  sunlinsol_LS => FSUNLinSol_Dense(sunvec_y, sunmat_A, sunctx)
+  ! Attach the matrix and linear solver
+  retval = FCVodeSetLinearSolver(cvode_mem, sunlinsol_LS, sunmat_A)
+  ! Use Newton non-linear solver
+  sunnonlin_NLS => FSUNNonlinSol_Newton(sunvec_y, sunctx)
+  retval = FCVodeSetNonlinearSolver(cvode_mem, sunnonlin_NLS)
+  ! Assign Jacobian
+  !retval = FCVodeSetJacFn(cvode_mem, c_funloc(jacrob))
+
+  if (present(hmax)) &
+    retval =  FCVodeSetMaxStep(cvode_mem, hmax)
+
+  retval = FCVode(cvode_mem, t2, sunvec_y, tret(1), CV_NORMAL)
+  if (retval /= CV_SUCCESS) then
+    write(*,*) 'Error in FCVode, retval = ', retval, '; halting'
+    stop 1
+  end if
+
+  ! free memory
+  call FCVodeFree(cvode_mem)
+  retval = FSUNLinSolFree(sunlinsol_LS)
+  call FSUNMatDestroy(sunmat_A)
+  call FN_VDestroy(sunvec_y)
+  call FN_VDestroy(sunvec_av)
+  retval = FSUNContext_Free(sunctx)
+
+  err = retval
+
+
+contains
+
+  ! ----------------------------------------------------------------
+  ! cvodefcn: The CVODE RHS operator function
+  ! ----------------------------------------------------------------
+  integer(c_int) function cvodefcn(t, sunvec_y, sunvec_f, user_data) result(ierr) bind(C, name='fcnrob')
+    use, intrinsic :: iso_c_binding
+    use fsundials_core_mod
+    use fnvector_serial_mod           ! Fortran interface to serial N_Vector
+    use fsunmatrix_dense_mod          ! Fortran interface to dense SUNMatrix
+    implicit none
+    real(c_double), value :: t         ! current time
+    type(N_Vector)        :: sunvec_y  ! solution N_Vector
+    type(N_Vector)        :: sunvec_f  ! function N_Vector
+    type(c_ptr), value :: user_data ! user-defined data
+    ! pointers to data in SUNDIALS vectors
+    real(c_double), pointer, dimension(neq) :: yval(:)
+    real(c_double), pointer, dimension(neq) :: fval(:)
+
+    ! get data arrays from SUNDIALS vectors
+    yval => FN_VGetArrayPointer(sunvec_y)
+    fval => FN_VGetArrayPointer(sunvec_f)
+
+    call fcn(NEQ,t2,yval,fval)
+
+    ierr = 0
+
+  end function cvodefcn
+  ! ----------------------------------------------------------------
+
+end subroutine wrap_cvode
 
 
 subroutine dummy()
