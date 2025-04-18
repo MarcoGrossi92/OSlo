@@ -1,3 +1,3 @@
 [submodule "lib/odepack"]
 	path = lib/odepack
-	url = https://github.com/Nicholaswogan/odepack.git
+	url = git@github.com:MarcoGrossi92/odepack.git
