@@ -60,7 +60,9 @@ END MODULE functions
 PROGRAM RUNEXAMPLE1
   use oslo
   use functions
+# if defined(MPI)
   use mpi
+# endif
   implicit none
   integer, parameter :: neq = 3, nc = 1000
   real(8) :: Y(neq,nc), t, TOUT, tlimit
@@ -69,7 +71,7 @@ PROGRAM RUNEXAMPLE1
   integer :: i
   character(10) :: try
   integer :: err
-  integer :: ierr, rank, size, start_idx, end_idx, loc_nc
+  integer :: ierr, rank=0, size, start_idx, end_idx, loc_nc
   real(8) :: diff, ref
   real(8) :: local_sum_even, local_sum_odd, global_sum_even, global_sum_odd
 
@@ -78,9 +80,11 @@ PROGRAM RUNEXAMPLE1
   tlimit = 4.d+10
   Format = '(A8,E20.8,A15)'
 
+# if defined(MPI)
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, size, ierr)
+# endif
 
   loc_nc = nc / size
   start_idx = rank * loc_nc + 1
@@ -98,9 +102,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -126,9 +132,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -154,9 +162,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -181,9 +191,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -208,9 +220,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -235,9 +249,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -262,9 +278,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -290,9 +308,11 @@ PROGRAM RUNEXAMPLE1
 
   local_sum_even = sum(Y(2, start_idx:end_idx:2))
   local_sum_odd  = sum(Y(2, start_idx+1:end_idx:2))
+# if defined(MPI)
   call MPI_REDUCE(local_sum_even, global_sum_even, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_REDUCE(local_sum_odd,  global_sum_odd,  1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+# endif
   if (rank == 0) then
     diff = abs(global_sum_even - global_sum_odd)
     ref  = max(abs(global_sum_even), abs(global_sum_odd), 1d-30)
@@ -306,7 +326,9 @@ PROGRAM RUNEXAMPLE1
   ! -------------------------
 # endif
 
+# if defined(MPI)
   call MPI_FINALIZE(ierr)
+# endif
 
 
 contains
