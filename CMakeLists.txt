@@ -38,6 +38,12 @@ endif()
 # FATODE
 add_subdirectory(lib/FATODE)
 
+# SUNDIALS
+set(SUNDIALS_DIR "lib/sundials/build")
+find_package(SUNDIALS REQUIRED
+             PATHS ${SUNDIALS_DIR}
+             NO_DEFAULT_PATH)
+
 # Build library
 add_subdirectory(src/lib)
 
