@@ -609,7 +609,7 @@ subroutine wrap_cvode(n,t1,t2,var,fcn,err,hmax,solout)
   sunnonlin_NLS => FSUNNonlinSol_Newton(sunvec_y, sunctx)
   retval = FCVodeSetNonlinearSolver(cvode_mem, sunnonlin_NLS)
   ! Assign Jacobian
-  !retval = FCVodeSetJacFn(cvode_mem, c_funloc(jacrob))
+  !retval = FCVodeSetJacFn(cvode_mem, c_funloc(jac))
 
   if (present(hmax)) &
     retval =  FCVodeSetMaxStep(cvode_mem, hmax)
@@ -636,7 +636,7 @@ contains
   ! ----------------------------------------------------------------
   ! cvodefcn: The CVODE RHS operator function
   ! ----------------------------------------------------------------
-  integer(c_int) function cvodefcn(t, sunvec_y, sunvec_f, user_data) result(ierr) bind(C, name='fcnrob')
+  integer(c_int) function cvodefcn(t, sunvec_y, sunvec_f, user_data) result(ierr) bind(C, name='fcn')
     use, intrinsic :: iso_c_binding
     use fsundials_core_mod
     use fnvector_serial_mod           ! Fortran interface to serial N_Vector

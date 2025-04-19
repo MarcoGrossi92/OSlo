@@ -241,6 +241,24 @@ PROGRAM RUNEXAMPLE1
   if(try=='fail')write(*,*)'error = ',sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))
 # endif
 
+
+  call setup_odesolver(N=neq,solver='cvode',RT=RT,AT=AT)
+  call initialize
+  call cpu_time(time1)
+  !$omp parallel private(i,T,TOUT,err)
+  !$omp do schedule(dynamic)
+  do i = 1, nc
+    T = 0.0D0; TOUT = tlimit
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+  enddo
+  !$omp enddo
+  !$omp end parallel
+  call cpu_time(time2)
+  try = 'fail'
+  if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
+  write(*,Format) 'cvode', (time2 - time1)/nthreads, try
+  if(try=='fail')write(*,*)'error = ',sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))
+
 contains
 
   subroutine initialize()
