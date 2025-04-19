@@ -1,107 +1,114 @@
-#!/bin/bash -
-#===============================================================================
-#
-#          FILE: intstall.sh
-#
-#         USAGE: run "./install.sh [options]" from OSlo master directory
-#
-#   DESCRIPTION: A utility script that builds OSlo project
-#===============================================================================
+#!/bin/bash
 
-# DEBUGGING
-set -e
-set -C # noclobber
+set -e  # Exit on any command failure
+set -u  # Treat unset variables as an error
 
-# INTERNAL VARIABLES AND INITIALIZATIONS
-readonly PROJECT="OSlo"
+PROGRAM=$(basename "$0")
 readonly DIR=$(pwd)
-readonly PROGRAM=`basename "$0"`
+VERBOSE=false
+CMD_OPTIONS=()  # Replace with a regular array
 
-function usage () {
-    echo "Install script of $PROJECT"
-    echo "Usage:"
-    echo
-    echo "$PROGRAM --help|-?"
-    echo "    Print this usage output and exit"
-    echo
-    echo "$PROGRAM --build  |-b"
-    echo "    Build the whole project via CMake"
-    echo
-    echo "$PROGRAM --compile|-c <type>"
-    echo "    Compile with build <type> (DEBUG, RELEASE, TESTING)"
-    echo
+function usage() {
+    cat <<EOF
+
+Install script for OSlo
+
+Usage:
+  $PROGRAM [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
+
+Global Options:
+  -v       , --verbose         Enable verbose output
+
+Commands:
+  build                        Perform the full build
+
+  compile                      Compile the program
+    --build-type=<build>       Set build type (release, debug, testing, default: release)
+
+EOF
+    exit 1
 }
 
-function build_project () {
-  rm -rf bin build && mkdir -p build
-  cd build
-  cmake .. -DUSE_OPENMP=ON -DCMAKE_BUILD_TYPE=RELEASE
-  make
+
+function log() {
+    if [ "$VERBOSE" = true ]; then
+        echo "$1"
+    fi
 }
 
-function compile () {
-  mkdir -p build
-  cd build
-  cmake .. -DUSE_OPENMP=ON -DCMAKE_BUILD_TYPE=$TYPE
-  make
-}
 
-BUILD=0
-TYPE=0
+# Default global values
+COMMAND=""
+BUILD_TYPE=""
 
-# RETURN VALUES/EXIT STATUS CODES
-readonly E_BAD_OPTION=254
+# Define allowed options for each command using regular arrays
+CMD_OPTIONS_COMPILE=("--build-type")
 
-# PROCESS COMMAND-LINE ARGUMENTS
-if [ $# -eq 0 ]; then
-  usage
-  exit 0
+# Parse options with getopts
+while getopts "v:-:" opt; do
+    case "$opt" in
+        -)
+            case "$OPTARG" in
+                verbose) VERBOSE=true ;;
+                *) echo "Error: Unknown global option '--$OPTARG'"; usage ;;
+            esac
+            ;;
+        v) VERBOSE=true ;;
+        *) echo "Error: Unknown global option '-$opt'"; usage ;;
+    esac
+done
+shift $((OPTIND -1))
+
+# Ensure a command was provided
+if [[ $# -eq 0 ]]; then
+    echo "Error: No command provided!"
+    usage
 fi
 
-while test $# -gt 0; do
-  if [ x"$1" == x"--" ]; then
-    # detect argument termination
+COMMAND="$1"
+shift
+
+# Parse command-specific options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --build-type=*)
+            [[ "$COMMAND" == "compile" ]] || { echo "Error: --build-type is only valid for 'compile' command"; exit 1; }
+            BUILD_TYPE="${1#*=}"
+            ;;
+        *)
+            echo "Error: Unknown option '$1' for command '$COMMAND'. Valid options: ${CMD_OPTIONS[$COMMAND]}"
+            exit 1
+            ;;
+    esac
     shift
-    break
-  fi
-  case $1 in
-
-    --build | -b )
-      shift
-      BUILD=1
-      ;;
-
-    --compile | -c )
-      shift
-      TYPE="$1"
-      ;;
-
-    --setvars | -s )
-      shift
-      SETVARS=1
-      ;;
-
-    -? | --help )
-      usage
-      exit
-      ;;
-
-    -* )
-      echo "Unrecognized option: $1" >&2
-      usage
-      exit $E_BAD_OPTION
-      ;;
-
-    * )
-      break
-      ;;
-  esac
 done
 
-if [ "$BUILD" != "0" ]; then
-  build_project
-elif [ "$TYPE" != "0" ]; then
-  compile
-else
-  usage
-fi
+
+# Execute the selected command
+case "$COMMAND" in
+    build)
+        log "Building project"
+        rm -rf bin build && mkdir -p build
+        cd $DIR/lib/sundials
+        mkdir -p build && cd build
+        cmake .. -DBUILD_FORTRAN_MODULE_INTERFACE=ON -DEXAMPLES_ENABLE_C=OFF -DEXAMPLES_ENABLE_CXX=OFF -DEXAMPLES_ENABLE_F2003=ON
+        make
+        cd $DIR/build
+        cmake .. -DUSE_MPI=OFF
+        make
+        ;;
+    compile)
+        if [[ -z "$BUILD_TYPE" ]]; then
+            echo "Error: --build-type is required for 'compile' command!"
+            exit 1
+        fi
+        log "Compiling with build type: $BUILD_TYPE"
+        cd $DIR/build
+        cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        make
+        ;;
+    *)
+        echo "Error: Unknown command '$COMMAND'"
+        usage
+        ;;
+esac
