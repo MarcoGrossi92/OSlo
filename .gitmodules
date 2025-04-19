@@ -1,3 +1,6 @@
 [submodule "lib/odepack"]
 	path = lib/odepack
 	url = git@github.com:MarcoGrossi92/odepack.git
+[submodule "lib/sundials"]
+	path = lib/sundials
+	url = git@github.com:LLNL/sundials.git
