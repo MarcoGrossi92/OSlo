@@ -139,11 +139,6 @@ contains
     case('dvodef90')
       run_odesolver => wrap_dvodef90OMP
 
-#   if defined(__GFORTRAN__)
-    case('lsoda')
-      run_odesolver => wrap_odepack
-#   endif
-
     case('H-radau5')
       LWORK=4*(n)*(n)+12*(n)+20
       LIWORK=3*n+20
@@ -445,32 +440,6 @@ subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err,hmax,solout)
   err = 0
 
 end subroutine wrap_dvodef90OMP
-
-
-#if defined(__GFORTRAN__)
-subroutine wrap_odepack(n,t1,t2,var,fcn,err,hmax,solout)
-  use odepack_mod
-  use interface_definitions, only : solout_if
-  implicit none
-  integer, intent(in)            :: n
-  real(R8), intent(inout)        :: t1, t2
-  real(R8), intent(inout)        :: var(n)
-  integer, intent(out)           :: err
-  real(R8), intent(in), optional :: hmax
-  procedure(solout_if), optional :: solout
-  external :: fcn
-  ! specific
-  type(lsoda_class) :: eq
-  integer :: itask, istate
-
-  itask = 1
-  istate = 1
-  call eq%initialize(fcn, n, istate=istate)
-  call eq%integrate(var, t1, t2, minval(RTOL), ATOL, itask, istate)
-  err = 0
-
-end subroutine wrap_odepack
-#endif
 
 
 subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)

@@ -38,22 +38,6 @@ CONTAINS
     YDOT(3) = 3.E7*Y(2)*Y(2)
   END SUBROUTINE Fdvode
 
-# if defined (__GFORTRAN__)
-  subroutine Fodepack(self, neq, t, y, ydot, ierr)
-    use odepack_mod
-    class(lsoda_class), intent(inout) :: self
-    integer, intent(in) :: neq
-    real(8), intent(in) :: t
-    real(8), intent(in) :: y(neq)
-    real(8), intent(out) :: ydot(neq)
-    integer, intent(out) :: ierr
-    YDOT(1) = -0.04d0*Y(1) + 1.d4*Y(2)*Y(3)
-    YDOT(2) = 0.04d0*Y(1) - 1.d4 *Y(2)*Y(3) - 3.d7 * Y(2)**2
-    YDOT(3) = 3.E7*Y(2)*Y(2)
-    ierr = 0
-  end subroutine Fodepack
-# endif
-
 END MODULE functions
 
 
@@ -87,17 +71,6 @@ PROGRAM RUNEXAMPLE1
   end do
   call cpu_time(time2)
   write(*,Format) 'dvodef90', time2-time1, Y(:)
-
-# if defined(__GFORTRAN__)
-  call setup_odesolver(N=neq,solver='lsoda',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fodepack,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'lsoda', time2-time1, Y(:)
-# endif
 
   call setup_odesolver(N=neq,solver='H-radau5',RT=RT,AT=AT)
   call cpu_time(time1)
