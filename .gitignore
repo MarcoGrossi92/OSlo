@@ -1,6 +1,7 @@
-#Build and bin
+#Build
 build
 bin
+sundials-install
 
 # Prerequisites
 *.d

@@ -89,12 +89,8 @@ case "$COMMAND" in
     build)
         log "Building project"
         rm -rf bin build && mkdir -p build
-        cd $DIR/lib/sundials
-        mkdir -p build && cd build
-        cmake .. -DBUILD_FORTRAN_MODULE_INTERFACE=ON -DEXAMPLES_ENABLE_C=OFF -DEXAMPLES_ENABLE_CXX=OFF -DEXAMPLES_ENABLE_F2003=ON
-        make
         cd $DIR/build
-        cmake .. -DUSE_MPI=OFF
+        cmake ..
         make
         ;;
     compile)
