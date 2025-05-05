@@ -605,7 +605,7 @@ contains
   ! ----------------------------------------------------------------
   ! cvodefcn: The CVODE RHS operator function
   ! ----------------------------------------------------------------
-  integer(c_int) function cvodefcn(t, sunvec_y, sunvec_f, user_data) result(ierr) bind(C, name='fcn')
+  integer(c_int) function cvodefcn(t, sunvec_y, sunvec_f, user_data) result(ierr) bind(C)
     use, intrinsic :: iso_c_binding
     use fsundials_core_mod
     use fnvector_serial_mod           ! Fortran interface to serial N_Vector
