@@ -48,7 +48,8 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/sundials/CMakeLists.txt")
     endif()
 endif()
 # Check if already installed
-if(NOT EXISTS "${SUNDIALS_INSTALL_DIR}/lib/cmake/sundials/SUNDIALSConfig.cmake")
+set(SUNDIALS_CONFIG_FILE "${SUNDIALS_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/sundials/SUNDIALSConfig.cmake")
+if(NOT EXISTS "${SUNDIALS_CONFIG_FILE}")
     message(STATUS "SUNDIALS not installed, building and installing it...")
 
     # Build SUNDIALS in a temporary build directory
@@ -62,6 +63,8 @@ if(NOT EXISTS "${SUNDIALS_INSTALL_DIR}/lib/cmake/sundials/SUNDIALSConfig.cmake")
                                            -DEXAMPLES_ENABLE_C=OFF
                                            -DEXAMPLES_ENABLE_CXX=OFF
                                            -DEXAMPLES_ENABLE_F2003=ON
+                                           -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                                           -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
                     RESULT_VARIABLE CONFIGURE_RESULT)
     if(NOT CONFIGURE_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to configure SUNDIALS")
