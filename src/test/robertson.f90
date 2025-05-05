@@ -25,19 +25,6 @@ CONTAINS
     YDOT(3) = 3.E7*Y(2)*Y(2)
   END SUBROUTINE Fgeneral
 
-  SUBROUTINE Fdvode(NEQ,T,Y,YDOT,RPAR,IPAR)
-    IMPLICIT NONE
-    INTEGER, INTENT (IN) :: NEQ
-    real(8), INTENT (IN) :: T
-    real(8), INTENT (IN) :: Y(NEQ)
-    real(8), INTENT (OUT) :: YDOT(NEQ)
-    real(8), intent(in) :: RPAR(*)
-    integer, intent(in) :: IPAR(*)
-    YDOT(1) = -0.04d0*Y(1) + 1.d4*Y(2)*Y(3)
-    YDOT(2) = 0.04d0*Y(1) - 1.d4 *Y(2)*Y(3) - 3.d7 * Y(2)**2
-    YDOT(3) = 3.E7*Y(2)*Y(2)
-  END SUBROUTINE Fdvode
-
 END MODULE functions
 
 
@@ -55,13 +42,6 @@ PROGRAM RUNEXAMPLE1
   AT = [1.D-8, 1.D-14, 1.D-6]
   tlimit = 4.d+10
   Format = '(A8,4E20.8)'
-
-  ! call setup_odesolver(N=neq,solver='dvode',RT=RT,AT=AT)
-  ! call initialize
-  ! call cpu_time(time1)
-  ! call run_odesolver(neq,T,TOUT,Y,Fdvode)
-  ! call cpu_time(time2)
-  ! write(*,Format) 'dvode', time2-time1, Y(:)
 
   call setup_odesolver(N=neq,solver='dvodef90',RT=RT,AT=AT)
   call cpu_time(time1)
@@ -128,9 +108,11 @@ PROGRAM RUNEXAMPLE1
 
 # if defined(INTEL)
   call setup_odesolver(N=neq,solver='dodesol',RT=RT,AT=AT)
-  call initialize
   call cpu_time(time1)
+  do i = 1, ntimes
+  call initialize
   call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  end do
   call cpu_time(time2)
   write(*,Format) 'dodesol', time2-time1, Y(:)
 # endif
