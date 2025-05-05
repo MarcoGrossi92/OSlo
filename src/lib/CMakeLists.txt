@@ -13,4 +13,9 @@ target_link_libraries(OSlo
     SUNDIALS::farkode_mod
     SUNDIALS::fsunnonlinsolnewton_mod
 )
+IF(USE_OPENMP)
+   SET_TARGET_PROPERTIES(OSlo PROPERTIES
+                         COMPILE_FLAGS "${OpenMP_Fortran_FLAGS}"
+                         LINK_FLAGS "${OpenMP_Fortran_FLAGS}")
+ENDIF()
 

@@ -7991,8 +7991,6 @@
 ! .. Intrinsic Functions ..
         INTRINSIC ABS, MAX, MIN
         
-        INTEGER OMP_GET_THREAD_NUM
-        
 ! ..
 ! .. FIRST EXECUTABLE STATEMENT DVNLSD
 ! ..
