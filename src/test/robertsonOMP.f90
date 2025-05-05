@@ -25,19 +25,6 @@ CONTAINS
     YDOT(3) = 3.E7*Y(2)*Y(2)
   END SUBROUTINE Fgeneral
 
-  SUBROUTINE Fdvode(NEQ,T,Y,YDOT,RPAR,IPAR)
-    IMPLICIT NONE
-    INTEGER, INTENT (IN) :: NEQ
-    real(8), INTENT (IN) :: T
-    real(8), INTENT (IN) :: Y(NEQ)
-    real(8), INTENT (OUT) :: YDOT(NEQ)
-    real(8), intent(in) :: RPAR(*)
-    integer, intent(in) :: IPAR(*)
-    YDOT(1) = -0.04d0*Y(1) + 1.d4*Y(2)*Y(3)
-    YDOT(2) = 0.04d0*Y(1) - 1.d4 *Y(2)*Y(3) - 3.d7 * Y(2)**2
-    YDOT(3) = 3.E7*Y(2)*Y(2)
-  END SUBROUTINE Fdvode
-
 END MODULE functions
 
 
