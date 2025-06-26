@@ -214,10 +214,12 @@ contains
       run_odesolver => wrap_dodesol
 #   endif
 
+#   if defined(SUNDIALS)
     case('cvode')
       allocate(IWORK_global(1))
       IWORK_global = 10000
       run_odesolver => wrap_cvode
+#   endif
 
     case default
 
@@ -521,7 +523,7 @@ subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
 
 end subroutine wrap_rk_FATODE
 
-
+# if defined(SUNDIALS)
 subroutine wrap_cvode(n,t1,t2,var,fcn,err,hmax,solout)
   use, intrinsic :: iso_c_binding
   use fsundials_core_mod
@@ -631,6 +633,7 @@ contains
   ! ----------------------------------------------------------------
 
 end subroutine wrap_cvode
+# endif
 
 
 subroutine dummy()

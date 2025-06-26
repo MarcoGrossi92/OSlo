@@ -117,6 +117,7 @@ PROGRAM RUNEXAMPLE1
   write(*,Format) 'dodesol', time2-time1, Y(:)
 # endif
 
+# if defined(SUNDIALS)
   call setup_odesolver(N=neq,solver='cvode',RT=RT,AT=AT)
   call cpu_time(time1)
   do i = 1, ntimes
@@ -125,6 +126,7 @@ PROGRAM RUNEXAMPLE1
   end do
   call cpu_time(time2)
   write(*,Format) 'cvode', time2-time1, Y(:)
+# endif
 
 contains
 

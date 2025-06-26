@@ -6,13 +6,15 @@ target_link_libraries(OSlo PRIVATE fatode)
 if (UNIX AND NOT APPLE)
   target_link_libraries(OSlo PRIVATE ${INTELODE})
 endif()
-target_link_libraries(OSlo
-  PRIVATE
-    SUNDIALS::fcvode_mod
-    SUNDIALS::fcore_mod
-    SUNDIALS::farkode_mod
-    SUNDIALS::fsunnonlinsolnewton_mod
-)
+if (USE_SUNDIALS)
+  target_link_libraries(OSlo
+    PRIVATE
+      SUNDIALS::fcvode_mod
+      SUNDIALS::fcore_mod
+      SUNDIALS::farkode_mod
+      SUNDIALS::fsunnonlinsolnewton_mod
+  )
+endif()
 IF(USE_OPENMP)
    SET_TARGET_PROPERTIES(OSlo PROPERTIES
                          COMPILE_FLAGS "${OpenMP_Fortran_FLAGS}"

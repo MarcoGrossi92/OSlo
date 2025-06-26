@@ -193,7 +193,7 @@ PROGRAM RUNEXAMPLE1
   if(try=='fail')write(*,*)'error = ',sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))
 # endif
 
-
+# if defined(SUNDIALS)
   call setup_odesolver(N=neq,solver='cvode',RT=RT,AT=AT)
   call initialize
   call cpu_time(time1)
@@ -210,6 +210,7 @@ PROGRAM RUNEXAMPLE1
   if (sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))<=1d-20) try = 'success' 
   write(*,Format) 'cvode', (time2 - time1)/nthreads, try
   if(try=='fail')write(*,*)'error = ',sum(Y(2,2:nc:2))-sum(Y(2,1:nc-1:2))
+# endif
 
 contains
 
