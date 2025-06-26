@@ -1,26 +1,12 @@
-#Build
+# Build
 build
-bin
+CMakePresets.json
+
+# Intsallation directories
 sundials-install
 
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
+# Executables
+bin
 
 # Fortran module files
 *.mod
-*.smod
-
-# Executables
-*.exe
-*.out
-*.app
