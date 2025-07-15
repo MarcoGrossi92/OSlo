@@ -7,11 +7,12 @@ PROGRAM=$(basename "$0")
 readonly DIR=$(pwd)
 BUILD_DIR="$DIR/build"
 VERBOSE=false
+project=OSlo
 
 function usage() {
     cat <<EOF
 
-Install script for OSlo
+Install script for $project
 
 Usage:
   $PROGRAM [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
@@ -84,7 +85,6 @@ function write_presets() {
   ]
 }
 EOF
-  log "CMakePresets.json created with default settings."
 }
 
 
@@ -99,11 +99,11 @@ REMOTE=false
 
 # Define allowed options for each command using regular arrays
 CMD=("build" "compile" "update")
-CMD_OPTIONS_build=("--use-openmp" "--use-mpi" "--compilers" "--use-sundials")
+CMD_OPTIONS_build=("--use-openmp --use-mpi --compilers --use-sundials")
 CMD_OPTIONS_update=("--remote")
 
-# Parse options with getopts
-while getopts "hv:-:" opt; do
+# Parse global options
+while getopts "hv-:" opt; do
     case "$opt" in
         -)
             case "$OPTARG" in
@@ -114,7 +114,7 @@ while getopts "hv:-:" opt; do
             ;;
         h) usage ;;
         v) VERBOSE=true ;;
-        *) error "Unknown global option '-$opt'"; usage ;;
+        ?) error "Unknown global option '-$OPTARG'"; usage ;;
     esac
 done
 shift $((OPTIND -1))
@@ -169,30 +169,38 @@ done
 # Execute the selected command
 case "$COMMAND" in
     build)
-        task "Building project"
-        log "Use OpenMP: $USE_OPENMP"
-        log "Use MPI: $USE_MPI"
-        log "Use Sundials: $USE_SUNDIALS"
-        rm -rf $BUILD_DIR
+        task "Building $project"
         if [[ $COMPILERS == "intel" ]]; then 
-            log "Using Intel compilers"
             export FC="ifx"
             export CC="icx"
         elif [[ $COMPILERS == "gnu" ]]; then 
-            log "Using GNU compilers"
             export FC="gfortran"
             export CC="gcc"
         fi
+        log "Build dir: $BUILD_DIR"
+        log "Build type: $BUILD_TYPE"
+        log "Use OpenMP: $USE_OPENMP"
+        log "Use MPI: $USE_MPI"
+        log "Use Sundials: $USE_SUNDIALS"
+        if [[ -z "${FC+x}" || -z "${CXX+x}" ]]; then
+          log "Compilers not set. CMake will decide."
+        else
+          log "Compilers: FC=$FC, CXX=$CXX"
+        fi
+        rm -rf $BUILD_DIR
         cmake -B $BUILD_DIR -DUSE_OPENMP=$USE_OPENMP -DUSE_MPI=$USE_MPI -DUSE_SUNDIALS=$USE_SUNDIALS -DCMAKE_BUILD_TYPE=$BUILD_TYPE || exit 1
         cmake --build $BUILD_DIR || exit 1
+        log "[OK] Compilation successful"
 
         task "Write CMakePresets.json"
         write_presets
+        log "[OK] CMakePresets.json created"
         ;;
     compile)
-        task "Compiling project using CMakePresets"
+        task "Compiling $project using CMakePresets"
         cmake --preset default || exit 1
         cmake --build $BUILD_DIR || exit 1
+        log "[OK] Compilation successful"
         ;;
     update)
         task "Updating git submodules"
@@ -203,6 +211,7 @@ case "$COMMAND" in
             log "Updating submodules to current commit"
             git submodule update --init
         fi
+        log "[OK] Submodules updated"
         ;;
     *)
         error "Unknown command '$COMMAND'"
