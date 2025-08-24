@@ -527,7 +527,7 @@ end subroutine wrap_rk_FATODE
 subroutine wrap_cvode(n,t1,t2,var,fcn,err,hmax,solout)
   use, intrinsic :: iso_c_binding
   use fsundials_core_mod
-  use fcvode_mod                    ! Fortran interface to CVODE
+  use fcvodes_mod                   ! Fortran interface to CVODES
   use fnvector_serial_mod           ! Fortran interface to serial N_Vector
   use fsunmatrix_dense_mod          ! Fortran interface to dense SUNMatrix
   use fsunlinsol_dense_mod          ! Fortran interface to dense SUNLinearSolver
@@ -591,6 +591,8 @@ subroutine wrap_cvode(n,t1,t2,var,fcn,err,hmax,solout)
     stop 1
   end if
 
+  !call PrintFinalStats(cvode_mem)
+
   ! free memory
   call FCVodeFree(cvode_mem)
   retval = FSUNLinSolFree(sunlinsol_LS)
@@ -625,12 +627,104 @@ contains
     yval => FN_VGetArrayPointer(sunvec_y)
     fval => FN_VGetArrayPointer(sunvec_f)
 
-    call fcn(NEQ,t2,yval,fval)
-
+    call fcn(NEQ,t,yval,fval)
     ierr = 0
+    if (all(fval==-1.0d0)) ierr = 1
 
   end function cvodefcn
   ! ----------------------------------------------------------------
+
+  ! ----------------------------------------------------------------
+  ! PrintFinalStats
+  !
+  ! Print CVode statstics to standard out
+  ! ----------------------------------------------------------------
+  subroutine PrintFinalStats(cvode_mem)
+
+    !======= Inclusions ===========
+    use iso_c_binding
+    use fcvodes_mod
+
+    !======= Declarations =========
+    implicit none
+
+    type(c_ptr), intent(in) :: cvode_mem ! solver memory structure
+
+    integer(c_int)  :: retval          ! error flag
+
+    integer(c_long) :: nsteps(1)     ! num steps
+    integer(c_long) :: nfe(1)        ! num function evals
+    integer(c_long) :: netfails(1)   ! num error test fails
+    integer(c_long) :: nniters(1)    ! nonlinear solver iterations
+    integer(c_long) :: nncfails(1)   ! nonlinear solver fails
+    integer(c_long) :: njacevals(1)  ! number of Jacobian evaluations
+    integer(c_long) :: nluevals(1)   ! number of LU evals
+    integer(c_long) :: ngevals(1)    ! number of root evals
+
+    !======= Internals ============
+
+    retval = FCVodeGetNumSteps(cvode_mem, nsteps)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumSteps, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    retval = FCVodeGetNumRhsEvals(cvode_mem, nfe)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumRhsEvals, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    retval = FCVodeGetNumLinSolvSetups(cvode_mem, nluevals)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumLinSolvSetups, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    retval = FCVodeGetNumErrTestFails(cvode_mem, netfails)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumErrTestFails, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    retval = FCVodeGetNumNonlinSolvIters(cvode_mem, nniters)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumNonlinSolvIters, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    retval = FCVodeGetNumNonlinSolvConvFails(cvode_mem, nncfails)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumNonlinSolvConvFails, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    retval = FCVodeGetNumJacEvals(cvode_mem, njacevals)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumJacEvals, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    retval = FCVodeGetNumGEvals(cvode_mem, ngevals)
+    if (retval /= 0) then
+      print *, 'Error in FCVodeGetNumGEvals, retval = ', retval, '; halting'
+      stop 1
+    end if
+
+    print *, ' '
+    print *, ' General Solver Stats:'
+    print '(4x,A,i9)', 'Total internal steps taken    =', nsteps
+    print '(4x,A,i9)', 'Total rhs function calls      =', nfe
+    print '(4x,A,i9)', 'Total Jacobian function calls =', njacevals
+    print '(4x,A,i9)', 'Total LU function calls       =', nluevals
+    print '(4x,A,i9)', 'Num error test failures       =', netfails
+    print '(4x,A,i9)', 'Num nonlinear solver iters    =', nniters
+    print '(4x,A,i9)', 'Num nonlinear solver fails    =', nncfails
+    print *, ' '
+
+    return
+
+  end subroutine PrintFinalStats
 
 end subroutine wrap_cvode
 # endif

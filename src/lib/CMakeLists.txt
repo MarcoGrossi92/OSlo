@@ -9,9 +9,9 @@ endif()
 if (USE_SUNDIALS)
   target_link_libraries(OSlo
     PRIVATE
-      SUNDIALS::fcvode_mod
+      SUNDIALS::fcvodes_mod
+      SUNDIALS::fidas_mod
       SUNDIALS::fcore_mod
-      SUNDIALS::farkode_mod
       SUNDIALS::fsunnonlinsolnewton_mod
   )
 endif()
