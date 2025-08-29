@@ -90,7 +90,7 @@ contains
       end subroutine lss_free
 
 end module ls_solver_rk
-#endif FULL_ALGEBRA
+#endif
 
 ! NOT WORKING WITH SPARSE_UMF OR SPARSE_LU
 
