@@ -182,10 +182,10 @@ case "$COMMAND" in
         log "Use OpenMP: $USE_OPENMP"
         log "Use MPI: $USE_MPI"
         log "Use Sundials: $USE_SUNDIALS"
-        if [[ -z "${FC+x}" || -z "${CXX+x}" ]]; then
+        if [[ -z "${FC+x}" || -z "${CC+x}" ]]; then
           log "Compilers not set. CMake will decide."
         else
-          log "Compilers: FC=$FC, CXX=$CXX"
+          log "Compilers: FC=$FC, CC=$CC"
         fi
         rm -rf $BUILD_DIR
         cmake -B $BUILD_DIR -DUSE_OPENMP=$USE_OPENMP -DUSE_MPI=$USE_MPI -DUSE_SUNDIALS=$USE_SUNDIALS -DCMAKE_BUILD_TYPE=$BUILD_TYPE || exit 1

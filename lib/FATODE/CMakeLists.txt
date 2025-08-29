@@ -1,22 +1,15 @@
-option(REQUIRE_FAST_LAPACK 
-"If ON, then cmake configuration will 
-error out if e.g. OpenBLAS is not found" OFF)
-
-if (${REQUIRE_FAST_LAPACK})
-  find_package(LAPACK REQUIRED)
-endif()
+# FATODE
 
 file(GLOB FATODE_FILES *.F90)
 add_compile_definitions(FULL_ALGEBRA)
 
 if (${LAPACK_FOUND})
-  add_library(fatode ${FATODE_FILES})
-  target_link_libraries(fatode ${LAPACK_LIBRARIES})
+  add_library(fatode OBJECT ${FATODE_FILES})
 else()
   # We compile lapack files downloaded from netlib
-  file(GLOB FATODE_LAPACK_FILES lapack/*.f)
-  add_library(fatode ${FATODE_FILES} ${FATODE_LAPACK_FILES})
+  add_library(fatode OBJECT ${FATODE_FILES} lapack/*.f)
 endif()
+target_include_directories(fatode PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 IF(USE_OPENMP)
   SET_TARGET_PROPERTIES(fatode PROPERTIES
                         COMPILE_FLAGS "${OpenMP_Fortran_FLAGS}"

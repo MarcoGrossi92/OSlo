@@ -33,6 +33,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # FATODE
+find_package(LAPACK)
 add_subdirectory(lib/FATODE)
 
 # SUNDIALS
@@ -64,7 +65,7 @@ if (USE_SUNDIALS)
                                           -DBUILD_FORTRAN_MODULE_INTERFACE=ON 
                                           -DEXAMPLES_ENABLE_C=OFF
                                           -DEXAMPLES_ENABLE_CXX=OFF
-                                          -DEXAMPLES_ENABLE_F2003=ON
+                                          -DEXAMPLES_ENABLE_F2003=OFF
                                           -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                                           -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
                                           RESULT_VARIABLE CONFIGURE_RESULT)
