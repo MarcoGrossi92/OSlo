@@ -9,10 +9,10 @@ OSlo is a comprehensive Fortran-based ODE (Ordinary Differential Equations) solv
 ## Features
 
 - **Multiple ODE Solvers**:
+  - Hairer and Wanner solvers for stiff ODE problems
   - FATODE: Fast and Accurate ODE solver with automatic differentiation
   - Intel ODE: Intel's optimized ODE solvers (Linux only)
   - SUNDIALS: Suite of nonlinear and differential/algebraic equation solvers
-  - Hairer and Wanner solvers for stiff ODE problems
 - **Flexible Parallelization**: Support for OpenMP and MPI
 - **Compiler Support**: Intel and GNU Fortran compilers
 - **LAPACK Integration**: Linear algebra support for robust ODE solving
@@ -68,14 +68,14 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 This project includes adapted versions of the following third-party
 libraries:
 
-- **Hairer and Wanner ODE Solvers**
-  Used for high-order ODE and DAE integration
+- **Hairer and Wanner ODE Solvers**  
+  Used for high-order ODE and DAE integration  
   © 2004, University of Geneva (UNIGE)  
   Licensed under a BSD-style license  
   https://www.unige.ch/~hairer/software.html
 
-- **FATODE**
-  Fast and Accurate ODE solver with automatic differentiation
+- **FATODE**  
+  Fast and Accurate ODE solver with automatic differentiation  
   https://people.cs.vt.edu/~asandu/Software/FATODE/index.html
 
 This project optionally uses the following third-party libraries:
@@ -86,7 +86,7 @@ This project optionally uses the following third-party libraries:
   Licensed under a BSD-style license  
   https://computing.llnl.gov/projects/sundials
 
-- **Intel ODE** 
+- **Intel ODE**  
   Intel's optimized ODE solvers for Linux systems
 
 ## Installation
