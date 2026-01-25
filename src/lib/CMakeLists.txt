@@ -1,7 +1,7 @@
 # Compile OSlo lib
 
 file(GLOB HSRC hairer*)
-add_library(OSlo OSlo.f90 dvodeOMP.f90 ${HSRC})
+add_library(OSlo OSlo.f90 ${HSRC})
 if(BLAS_FOUND AND LAPACK_FOUND)
   target_link_libraries(OSlo PRIVATE fatode ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 else()

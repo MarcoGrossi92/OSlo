@@ -43,15 +43,6 @@ PROGRAM RUNEXAMPLE1
   tlimit = 4.d+10
   Format = '(A8,4E20.8)'
 
-  call setup_odesolver(N=neq,solver='dvodef90',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'dvodef90', time2-time1, Y(:)
-
   call setup_odesolver(N=neq,solver='H-radau5',RT=RT,AT=AT)
   call cpu_time(time1)
   do i = 1, ntimes

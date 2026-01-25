@@ -113,7 +113,7 @@ contains
     integer, intent(in), optional  :: IOPT(NIOPT)
     integer :: Nsteps, Nnewt, icnt
 
-    ! Tollerances are defined as arrays -> ITOL = 1 (Hairer); ITOL = 2 (DVODE)
+    ! Tollerances are defined as arrays -> ITOL = 1 (Hairer)
     ITOL = 1
 
     Nsteps = 0; Nnewt = 0; icnt = 0
@@ -135,9 +135,6 @@ contains
     if (present(AT)) ATOL = AT
 
     select case(solver)
-
-    case('dvodef90')
-      run_odesolver => wrap_dvodef90OMP
 
     case('H-radau5')
       LWORK=4*(n)*(n)+12*(n)+20
@@ -418,30 +415,6 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
 
 end subroutine wrap_rodas
-
-
-subroutine wrap_dvodef90OMP(n,t1,t2,var,fcn,err,hmax,solout)
-  use DVODE_F90_M
-  use interface_definitions, only : solout_if
-  implicit none
-  integer, intent(in)            :: n
-  real(R8), intent(inout)        :: t1, t2
-  real(R8), intent(inout)        :: var(n)
-  integer, intent(out)           :: err
-  real(R8), intent(in), optional :: hmax
-  procedure(solout_if), optional :: solout
-  external :: fcn
-  ! specific
-  integer :: ITASK, ISTATE
-  TYPE (VODE_OPTS) :: OPTIONS
-
-  ITASK = 1
-  ISTATE = 1
-  OPTIONS = SET_OPTS(DENSE_J=.TRUE.,ABSERR_VECTOR=ATOL,RELERR_VECTOR=RTOL)
-  CALL DVODE_F90(fcn,n,var,t1,t2,ITASK,ISTATE,OPTIONS)
-  err = 0
-
-end subroutine wrap_dvodef90OMP
 
 
 subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
