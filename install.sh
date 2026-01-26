@@ -23,7 +23,7 @@ Global Options:
 
 Commands:
   build                     Perform a full build
-    --compiler=<name>       Set compilers suit (intel,gnu)
+    --compilers=<name>      Set compilers suit (intel,gnu)
     --use-openmp            Use OpenMP
     --use-mpi               Use MPI
     --use-sundials          Use Sundials
