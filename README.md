@@ -162,21 +162,21 @@ gfortran your_program.o -Lbuild/lib -loslo -o your_program
 
 ### Bundled
 
-* **Hairer & Wanner Solvers**
-  © University of Geneva — BSD-style license
+* **Hairer & Wanner Solvers**  
+  © University of Geneva — BSD-style license  
   [https://www.unige.ch/~hairer/software.html](https://www.unige.ch/~hairer/software.html)
 
-* **FATODE**
-  Fast and Accurate ODE solver with AD
+* **FATODE**  
+  Fast and Accurate ODE solver with AD  
   [https://people.cs.vt.edu/~asandu/Software/FATODE/](https://people.cs.vt.edu/~asandu/Software/FATODE/)
 
 ### Optional
 
-* **SUNDIALS**
-  © Lawrence Livermore National Laboratory — BSD license
+* **SUNDIALS**  
+  © Lawrence Livermore National Laboratory — BSD license  
   [https://computing.llnl.gov/projects/sundials](https://computing.llnl.gov/projects/sundials)
 
-* **Intel ODE**
+* **Intel ODE**  
   Intel-optimized ODE solvers (Linux only)
 
 ---
