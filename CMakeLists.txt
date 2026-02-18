@@ -62,6 +62,7 @@ if (USE_SUNDIALS)
                                           -DCMAKE_BUILD_TYPE=Release
                                           -DBUILD_SHARED_LIBS=OFF
                                           -DSUNDIALS_BUILD_WITH_MONITORING=OFF
+                                          -DSUNDIALS_BUILD_WITH_PROFILING=OFF
                                           -DBUILD_FORTRAN_MODULE_INTERFACE=ON 
                                           -DEXAMPLES_ENABLE_C=OFF
                                           -DEXAMPLES_ENABLE_CXX=OFF
