@@ -7,6 +7,15 @@
 ####################################################################
 INCLUDE(${CMAKE_MODULE_PATH}/SetCompileFlag.cmake)
 
+# When using IPO with Intel + MPI/OpenMP, the linker must also receive -ipo.
+# CMake does not propagate compile-time IPO flags to the linker automatically.
+if(USE_MPI OR USE_OPENMP)
+    SET_COMPILE_FLAG(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}"
+                     Fortran "-ipo"
+                             "/Qipo"
+                    )
+endif()
+
 # Make sure the build type is uppercase
 STRING(TOUPPER "${CMAKE_BUILD_TYPE}" BT)
 
@@ -73,11 +82,21 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "-cpp"        # Intel or GNU
                 )
 
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
+                  Fortran  "-ffree-line-length-none"     # Intel o GNU
+                           "-ffixed-line-length-none"    # Intel
+                           "-extend-source"
+                )        
 ###################
 ### DEBUG FLAGS ###
 ###################
 
-# NOTE: debugging symbols (-g or /debug:full) are already on by default
+# Debugging symbols (explicit, do not rely on CMake defaults)
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+                 Fortran "-ggdb3"  # GNU -- max GDB info including macros
+                         "-g3"     # generic fallback
+                         "-g"      # Intel/PGI
+                )
 
 # Disable optimizations
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
@@ -85,12 +104,20 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
                                   "/Od" # Intel Windows
                 )
 
-# Turn on all warnings 
+# Turn on all warnings
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
-                 Fortran "-warn all" # Intel
-                         "/warn:all" # Intel Windows
-                         "-Wall"     # GNU
-                                     # Portland Group (on by default)
+                 Fortran "-warn all"         # Intel
+                         "/warn:all"         # Intel Windows
+                         "-Wall"             # GNU
+                                             # Portland Group (on by default)
+                )
+
+# Extra warnings (implicit interfaces, unused dummies, etc.)
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+                 Fortran "-Wextra"                 # GNU
+                         "-Wimplicit-interface"     # GNU
+                         "-Wimplicit-procedure"     # GNU
+                         "-warn interfaces"         # Intel
                 )
 
 # Traceback
@@ -101,13 +128,35 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
                          "-ftrace=full" # GNU (g95)
                 )
 
-# Check array bounds
+# Check everything: bounds, pointers, uninitialized, temporaries
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
-                 Fortran "-check bounds"  # Intel
-                         "/check:bounds"  # Intel Windows
-                         "-fcheck=bounds" # GNU (New style)
-                         "-fbounds-check" # GNU (Old style)
+                 Fortran "-check all"    # Intel
+                         "/check:all"    # Intel Windows
+                         "-fcheck=all"   # GNU (New style) -- replaces -fcheck=bounds
+                         "-fbounds-check" # GNU (Old style fallback)
                          "-Mbounds"       # Portland Group
+                )
+
+# Initialize reals to signalling NaN to catch use-before-set
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+                 Fortran "-finit-real=snan"    # GNU
+                         "-init=snan,arrays"   # Intel
+                )
+
+# Initialize integers to a sentinel value
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+                 Fortran "-finit-integer=-42"  # GNU
+                )
+
+# Trap floating-point exceptions (NaN/Inf/zero-divide crash immediately)
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+                 Fortran "-ffpe-trap=invalid,zero,overflow"  # GNU
+                         "-fpe0"                             # Intel (trap all)
+                )
+
+# Stack protection
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+                 Fortran "-fstack-protector-all"  # GNU
                 )
 
 #####################
@@ -120,11 +169,20 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_TESTING "${CMAKE_Fortran_FLAGS_TESTING}"
                                   "/O2" # Intel Windows
                 )
 
+# Debug symbols so tests are still debuggable
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_TESTING "${CMAKE_Fortran_FLAGS_TESTING}"
+                 Fortran "-g"  # GNU/Intel/PGI
+                )
+
+# Bounds checking (compatible with -O2)
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_TESTING "${CMAKE_Fortran_FLAGS_TESTING}"
+                 Fortran "-fcheck=bounds"  # GNU
+                         "-check bounds"   # Intel
+                )
+
 #####################
 ### RELEASE FLAGS ###
 #####################
-
-# NOTE: agressive optimizations (-O3) are already turned on by default
 
 # Unroll loops
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
@@ -142,23 +200,41 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
                          "-Minline"           # Portland Group
                 )
 
-# Interprocedural (link-time) optimizations
+# Interprocedural optimization (Intel/PGI only)
+# GNU's -flto is excluded: it is fragile with mixed-language static libraries,
+# MPI wrappers, and certain linker configurations.
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
-                 Fortran "-ipo"     # Intel
-                         "/Qipo"    # Intel Windows
-                         "-flto"    # GNU
-                         "-Mipa"    # Portland Group
+                 Fortran "-ipo"              # Intel
+                         "/Qipo"             # Intel Windows
+                         "-Mipa=fast,inline" # Portland Group
                 )
 
-# Single-file optimizations
-#SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
-#                 Fortran "-ip"  # Intel
-#                         "/Qip" # Intel Windows
-#                )
+# Fast math (breaks strict IEEE 754 -- verify numerics are unaffected)
+# WARNING: may change floating-point results; disable if results diverge
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
+                 Fortran "-ffast-math"        # GNU
+                         "-fp-model fast=2"   # Intel (aggressive)
+                )
 
-# Vectorize code
-#SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
-#                 Fortran "-vec-report0"  # Intel
-#                         "/Qvec-report0" # Intel Windows
-#                         "-Mvect"        # Portland Group
-#                )
+# Free a register by omitting frame pointer
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
+                 Fortran "-fomit-frame-pointer"  # GNU
+                )
+
+#########################################
+### DIAGNOSTIC SUMMARY (always prints) ##
+#########################################
+message(STATUS "----------------------------------------------------")
+message(STATUS "Fortran compiler   : ${CMAKE_Fortran_COMPILER_ID} ${CMAKE_Fortran_COMPILER_VERSION} (${CMAKE_Fortran_COMPILER})")
+message(STATUS "Build type         : ${CMAKE_BUILD_TYPE}")
+message(STATUS "Fortran base flags : ${CMAKE_Fortran_FLAGS}")
+if(BT STREQUAL "DEBUG")
+  message(STATUS "Fortran DEBUG flags: ${CMAKE_Fortran_FLAGS_DEBUG}")
+elseif(BT STREQUAL "TESTING")
+  message(STATUS "Fortran TEST flags : ${CMAKE_Fortran_FLAGS_TESTING}")
+else()
+  message(STATUS "Fortran RELEASE flags: ${CMAKE_Fortran_FLAGS_RELEASE}")
+endif()
+message(STATUS "USE_OPENMP=${USE_OPENMP}  USE_MPI=${USE_MPI}")
+message(STATUS "----------------------------------------------------")
+

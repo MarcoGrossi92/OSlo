@@ -20,21 +20,22 @@ INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 # about Fortran.
 INCLUDE(${CMAKE_MODULE_PATH}/SetParallelizationLibrary.cmake)
 
+# Include the functions that gather source files and link dependencies for OSlo.
+INCLUDE(${CMAKE_MODULE_PATH}/SetOSlo.cmake)
+
 # Set directories
 include(GNUInstallDirs)
 set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/modules")
 
+# ------------------------------
 # Define third-party libs
+# ------------------------------
 
 # Intel-ODE
 if(UNIX AND NOT APPLE)
   add_compile_definitions(INTEL)
   file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/lib/intel64/*")
 endif()
-
-# FATODE
-find_package(LAPACK)
-add_subdirectory(lib/FATODE)
 
 # SUNDIALS
 OPTION(USE_SUNDIALS "Use Sundials suite of solvers" ON)
@@ -84,12 +85,24 @@ if (USE_SUNDIALS)
   add_compile_definitions(SUNDIALS)
 endif(USE_SUNDIALS)
 
+# -----------------------------
 # Build library
-add_subdirectory(src/lib)
+# ------------------------------
 
-# Build tests and applications (only if OSlo build has not been called by another program)
+# Gather source files and link dependencies. The functions that do this are defined in cmake/AddOSlo.cmake
+find_package(BLAS)
+find_package(LAPACK)
+gather_oslo_files(OSLO_SRC)
+add_library(OSlo ${OSLO_SRC})
+link_oslo_dependencies(OSlo)
+
+# ------------------------------
+# Build tests and applications
+# ------------------------------
+
+# Build tests and applications only if OSlo build has not been called by another program
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    message("-- Full build allowed")
-    add_subdirectory(src/test)
+  message("-- Full build allowed")
+  add_subdirectory(src/test)
 endif()
 
