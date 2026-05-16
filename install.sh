@@ -18,7 +18,6 @@ Usage:
   $PROGRAM [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
 
 Global Options:
-  -h       , --help         Show this help message and exit
   -v       , --verbose      Enable verbose output
 
 Commands:
@@ -103,16 +102,14 @@ CMD_OPTIONS_build=("--use-openmp --use-mpi --compilers --use-sundials")
 CMD_OPTIONS_update=("--remote")
 
 # Parse global options
-while getopts "hv-:" opt; do
+while getopts "v-:" opt; do
     case "$opt" in
         -)
             case "$OPTARG" in
                 verbose) VERBOSE=true ;;
-                help) usage ;;
                 *) error "Unknown global option '--$OPTARG'"; usage ;;
             esac
             ;;
-        h) usage ;;
         v) VERBOSE=true ;;
         ?) error "Unknown global option '-$OPTARG'"; usage ;;
     esac
