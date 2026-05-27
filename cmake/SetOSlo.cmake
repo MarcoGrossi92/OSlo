@@ -4,7 +4,7 @@ function(gather_oslo_files out_var)
   file(GLOB FATODE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lib/FATODE/*.F90")
 
   if (NOT LAPACK_FOUND)
-    file(GLOB LAPACK_FILES "${CMAKE_CURRENT_SOURCE_DIR}/lapack/*.f")
+    file(GLOB LAPACK_FILES "${CMAKE_CURRENT_SOURCE_DIR}/lib/FATODE/lapack/*.f")
     list(APPEND FATODE_FILES ${LAPACK_FILES})
   endif()
 
