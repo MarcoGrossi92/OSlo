@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project (OSlo LANGUAGES Fortran C)
+project (OSLO LANGUAGES Fortran C)
 
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
 # seach path for cmake modules
@@ -20,8 +20,8 @@ INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 # about Fortran.
 INCLUDE(${CMAKE_MODULE_PATH}/SetParallelizationLibrary.cmake)
 
-# Include the functions that gather source files and link dependencies for OSlo.
-INCLUDE(${CMAKE_MODULE_PATH}/SetOSlo.cmake)
+# Include the functions that gather source files and link dependencies for OSLO.
+INCLUDE(${CMAKE_MODULE_PATH}/SetOSLO.cmake)
 
 # Set directories
 include(GNUInstallDirs)
@@ -89,18 +89,18 @@ endif(USE_SUNDIALS)
 # Build library
 # ------------------------------
 
-# Gather source files and link dependencies. The functions that do this are defined in cmake/AddOSlo.cmake
+# Gather source files and link dependencies. The functions that do this are defined in cmake/AddOSLO.cmake
 find_package(BLAS)
 find_package(LAPACK)
 gather_oslo_files(OSLO_SRC)
-add_library(OSlo ${OSLO_SRC})
-link_oslo_dependencies(OSlo)
+add_library(OSLO ${OSLO_SRC})
+link_oslo_dependencies(OSLO)
 
 # ------------------------------
 # Build tests and applications
 # ------------------------------
 
-# Build tests and applications only if OSlo build has not been called by another program
+# Build tests and applications only if OSLO build has not been called by another program
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message("-- Full build allowed")
   add_subdirectory(src/test)

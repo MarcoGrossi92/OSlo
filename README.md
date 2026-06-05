@@ -1,13 +1,13 @@
-# OSlo — A Unified Fortran ODE Solver Toolbox
+# OSLO — Unified ODE Solver Toolbox
 
-![License](https://img.shields.io/github/license/MarcoGrossi92/OSlo)
+![License](https://img.shields.io/github/license/MarcoGrossi92/OSLO)
 ![Fortran](https://img.shields.io/badge/Fortran-90%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey)
 
-**OSlo** is a high-performance, Fortran-based toolbox for solving systems of ordinary differential equations (ODEs).
+**OSLO (ODE SoLver toolbOx)** is a high-performance, Fortran-based toolbox for solving systems of ordinary differential equations (ODEs).
 It provides a **unified and modular interface** to multiple state-of-the-art ODE solvers, allowing users to switch between stiff and non-stiff integrators with minimal code changes.
 
-OSlo is designed for **scientific computing and HPC environments**, bundling well-established solvers such as **DVODE**, **FATODE**, **Hairer–Wanner methods**, **Intel ODE**, and **SUNDIALS** under a single, consistent API.
+OSLO is designed for **scientific computing and HPC environments**, bundling well-established solvers libraries under a single, consistent API.
 
 ---
 
@@ -19,7 +19,6 @@ OSlo is designed for **scientific computing and HPC environments**, bundling wel
 * **Broad Solver Coverage**
 
   * Hairer & Wanner solvers for stiff and non-stiff problems
-  * **DVODE** (classic and reliable)
   * **FATODE** with automatic differentiation
   * **Intel ODE** (Linux only, Intel compiler)
   * **SUNDIALS** (CVODE, IDA, etc.)
@@ -62,7 +61,7 @@ OSlo is designed for **scientific computing and HPC environments**, bundling wel
 
 ## Platform Support
 
-OSlo has been tested on the following configurations:
+OSLO has been tested on the following configurations:
 
 | OS             | Compiler       | Status |
 | -------------- | -------------- | ------ |
@@ -81,8 +80,8 @@ The toolbox is expected to work on most Unix-like systems with a compatible Fort
 ### Quick Start
 
 ```bash
-git clone https://github.com/MarcoGrossi92/OSlo.git
-cd OSlo
+git clone https://github.com/MarcoGrossi92/OSLO.git
+cd OSLO
 ./install.sh build --compiler=gnu
 ```
 
@@ -132,12 +131,12 @@ make install
 
 ## Usage
 
-OSlo builds a Fortran library that can be linked into your own applications.
+OSLO builds a Fortran library that can be linked into your own applications.
 
 ### Minimal Example
 
 ```fortran
-use oslo
+use OSLO
 implicit none
 
 integer, parameter :: neq = 3
@@ -149,11 +148,11 @@ call setup_odesolver(N=neq, solver='dvodef90', RT=rtol, AT=atol)
 call run_odesolver(neq, t, tout, y, Fgeneral, err)
 ```
 
-### Linking Against OSlo
+### Linking Against OSLO
 
 ```bash
 gfortran -c your_program.f90 -Ibuild/modules
-gfortran your_program.o -Lbuild/lib -loslo -o your_program
+gfortran your_program.o -Lbuild/lib -lOSLO -o your_program
 ```
 
 ---
@@ -167,7 +166,7 @@ gfortran your_program.o -Lbuild/lib -loslo -o your_program
   [https://www.unige.ch/~hairer/software.html](https://www.unige.ch/~hairer/software.html)
 
 * **FATODE**  
-  Fast and Accurate ODE solver with AD  
+  Fast and Accurate ODE solver with AD — GNUv1.3 license  
   [https://people.cs.vt.edu/~asandu/Software/FATODE/](https://people.cs.vt.edu/~asandu/Software/FATODE/)
 
 ### Optional
@@ -184,7 +183,7 @@ gfortran your_program.o -Lbuild/lib -loslo -o your_program
 ## Project Structure
 
 ```text
-OSlo/
+OSLO/
 ├── src/            # Core library and solvers
 ├── lib/            # Third-party solver sources
 ├── bin/            # Executables and tests
@@ -217,6 +216,6 @@ Please use the GitHub issue tracker for:
 * feature requests
 * solver questions
 
-👉 [https://github.com/MarcoGrossi92/OSlo/issues](https://github.com/MarcoGrossi92/OSlo/issues)
+👉 [https://github.com/MarcoGrossi92/OSLO/issues](https://github.com/MarcoGrossi92/OSLO/issues)
 
 ---

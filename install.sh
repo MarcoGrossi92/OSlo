@@ -7,7 +7,7 @@ PROGRAM=$(basename "$0")
 readonly DIR=$(pwd)
 BUILD_DIR="$DIR/build"
 VERBOSE=false
-project=OSlo
+project=OSLO
 
 function usage() {
     cat <<EOF
@@ -26,11 +26,6 @@ Commands:
     --use-openmp            Use OpenMP
     --use-mpi               Use MPI
     --use-sundials          Use Sundials
-
-  compile                   Compile the program using the CMakePresets file
-
-  update                    Download git submodules
-    --remote                Use the latest remote commit
 
 EOF
     exit 1
@@ -94,12 +89,10 @@ BUILD_TYPE="RELEASE"
 USE_OPENMP="false"
 USE_MPI="false"
 USE_SUNDIALS="false"
-REMOTE=false
 
 # Define allowed options for each command using regular arrays
-CMD=("build" "compile" "update")
+CMD=("build")
 CMD_OPTIONS_build=("--use-openmp --use-mpi --compilers --use-sundials")
-CMD_OPTIONS_update=("--remote")
 
 # Parse global options
 while getopts "v-:" opt; do
@@ -149,10 +142,6 @@ while [[ $# -gt 0 ]]; do
             [[ "$COMMAND" == "build" ]] || { error " --use-sundials is only valid for 'build' command"; exit 1; }
             USE_SUNDIALS="true"
             ;;
-        --remote)
-            [[ "$COMMAND" == "update" ]] || { error " --remote is only valid for 'update' command"; exit 1; }
-            REMOTE=true
-            ;;
         *)
             eval "opts=(\"\${CMD_OPTIONS_${COMMAND}[@]}\")"
             error "Unknown option '$1' for command '$COMMAND'. Valid options: ${opts[@]}"
@@ -192,23 +181,6 @@ case "$COMMAND" in
         task "Write CMakePresets.json"
         write_presets
         log "[OK] CMakePresets.json created"
-        ;;
-    compile)
-        task "Compiling $project using CMakePresets"
-        cmake --preset default || exit 1
-        cmake --build $BUILD_DIR || exit 1
-        log "[OK] Compilation successful"
-        ;;
-    update)
-        task "Updating git submodules"
-        if [[ "$REMOTE" == "true" ]]; then
-            log "Updating submodules to latest remote commit"
-            git submodule update --init --remote
-        else
-            log "Updating submodules to current commit"
-            git submodule update --init
-        fi
-        log "[OK] Submodules updated"
         ;;
     *)
         error "Unknown command '$COMMAND'"
