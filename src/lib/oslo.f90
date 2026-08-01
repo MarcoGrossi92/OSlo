@@ -136,6 +136,14 @@ contains
 
     select case(solver)
 
+    case('H-dopri5')
+      LWORK = 8*N + 5*N + 21
+      LIWORK = N + 21
+      allocate(IWORK_global(LIWORK))
+      IWORK_global = 0
+      IWORK_global(1) = Nsteps
+      run_odesolver => wrap_dopri5
+
     case('H-radau5')
       LWORK=4*(n)*(n)+12*(n)+20
       LIWORK=3*n+20
@@ -419,6 +427,40 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
 
 end subroutine wrap_rodas
+
+
+subroutine wrap_dopri5(n,t1,t2,var,fcn,IDID,hmax,solout)
+  use interface_definitions, only : solout_if
+  implicit none
+  integer, intent(in)            :: n
+  real(R8), intent(inout)        :: t1, t2
+  real(R8), intent(inout)        :: var(n)
+  integer, intent(out)           :: IDID
+  real(R8), intent(in), optional :: hmax
+  procedure(solout_if), optional :: solout
+  external :: fcn
+  external :: DOPRI5
+  real(R8) :: WORK(LWORK)
+  integer :: IWORK(LIWORK), IOUT
+  real(R8) :: RTOL_(n), ATOL_(n)
+
+  IWORK = IWORK_global
+  WORK = 0d0
+  if (present(hmax)) WORK(6) = hmax
+  RTOL_ = RTOL; ATOL_ = ATOL
+  IOUT = 1
+
+  if (present(solout)) then
+    call DOPRI5(n,fcn,t1,var,t2,RTOL_,ATOL_,ITOL, &
+                solout,IOUT, &
+                WORK,LWORK,IWORK,LIWORK,IDID)
+  else
+    call DOPRI5(n,fcn,t1,var,t2,RTOL_,ATOL_,ITOL, &
+                dummy,IOUT, &
+                WORK,LWORK,IWORK,LIWORK,IDID)
+  end if
+
+end subroutine wrap_dopri5
 
 
 subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
