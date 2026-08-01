@@ -278,7 +278,11 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
   real(R8) :: XOLD,HSOL,RCONT(LRCONT-2)
   integer :: NFCN,NJAC,NSTEP,NACCPT,NREJCT,NDEC,NSOL
 
-  h = 0.D0
+  !> Seed the initial step from hmax when the caller supplies one. With h=0 SDIRK4
+  !> picks its own 1e-6 default, which is far too large for stiff small-scale ODEs.
+  if (present(hmax)) then; h = hmax * 1.0d-2
+  else;                    h = 0.D0
+  endif
   IJAC = 0
   IMAS = 0
   MLJAC = n
