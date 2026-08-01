@@ -1156,12 +1156,18 @@ C --- UNEXPECTED STEP-REJECTION
       REJECT=.TRUE.
       IF (CALJAC) GOTO 20
       GOTO 10
-C --- FAIL EXIT
+C --- FAIL / INTERRUPT EXIT
+C     Label 79 is reached BOTH by genuine failures (IRTRN>=0: NMAX,
+C     step-too-small, repeated singular matrix) AND by a SOLOUT-requested
+C     stop (IRTRN<0). Per the standard Hairer convention (see DOPRI5/RADAU5/
+C     RODAS headers) the latter is a SUCCESS and must return IDID=2, not -1.
   79  IF (IRTRN.GE.0) THEN
       WRITE (6,979) X,H,IER
  979  FORMAT(' EXIT OF SDIRK4 AT X=',D14.7,'   H=',D14.7,'   IER=',I4)
-      END IF
       IDID=-1
+      ELSE
+      IDID=2
+      END IF
       RETURN
       END
 C
