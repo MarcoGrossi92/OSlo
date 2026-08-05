@@ -62,7 +62,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -79,7 +79,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -96,7 +96,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -113,7 +113,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -130,7 +130,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -147,7 +147,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -165,7 +165,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel
@@ -184,7 +184,7 @@ PROGRAM RUNEXAMPLE1
   !$omp do schedule(dynamic)
   do i = 1, nc
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   !$omp enddo
   !$omp end parallel

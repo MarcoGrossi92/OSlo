@@ -47,7 +47,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'H-radau5', time2-time1, Y(:)
@@ -56,7 +56,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'radau2a', time2-time1, Y(:)
@@ -65,7 +65,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'H-rodas', time2-time1, Y(:)
@@ -74,7 +74,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'rodas3', time2-time1, Y(:)
@@ -83,7 +83,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'H-sdirk4', time2-time1, Y(:)
@@ -92,7 +92,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'sdirk4b', time2-time1, Y(:)
@@ -102,7 +102,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'dodesol', time2-time1, Y(:)
@@ -113,7 +113,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = 1, ntimes
   call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,err)
+  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
   end do
   call cpu_time(time2)
   write(*,Format) 'cvode', time2-time1, Y(:)

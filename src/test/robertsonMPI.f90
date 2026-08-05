@@ -68,7 +68,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = start_idx, end_idx
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   call cpu_time(time2)
 
@@ -97,7 +97,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = start_idx, end_idx
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   call cpu_time(time2)
 
@@ -126,7 +126,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = start_idx, end_idx
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   call cpu_time(time2)
 
@@ -155,7 +155,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = start_idx, end_idx
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   call cpu_time(time2)
 
@@ -184,7 +184,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = start_idx, end_idx
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   call cpu_time(time2)
 
@@ -214,7 +214,7 @@ PROGRAM RUNEXAMPLE1
   call cpu_time(time1)
   do i = start_idx, end_idx
     T = 0.0D0; TOUT = tlimit
-    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,err)
+    call run_odesolver(neq,T,TOUT,Y(:,i),Fgeneral,no_jacobian,0,err)
   enddo
   call cpu_time(time2)
 

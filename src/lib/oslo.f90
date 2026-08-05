@@ -1,7 +1,8 @@
 ! OSLO - ODE SoLver toolbOx
 !
 ! ODE solvers are set to work with the following specifications:
-!   - full and unknown Jacobian evaluated by the solver
+!   - full Jacobian, either evaluated by the solver (IJAC=0) or supplied by the
+!     caller through the `jac` argument of run_odesolver (IJAC=1)
 !   - the mass-matrix is the identity.
 ! All the parameters in the "setup" subroutine and within each solver procedure are set accordingly.
 !
@@ -62,6 +63,21 @@ module interface_definitions
     end subroutine solout_if
   end interface
 
+  !> Analytical Jacobian of `fcn`. The signature is Hairer's: RADAU5, RODAS and
+  !> SDIRK4 all declare JAC exactly this way, so one interface serves all three.
+  !>   DFY(i,j) = d f(i) / d y(j), stored full (the wrappers set MLJAC = N).
+  interface
+    subroutine jac_if(N, X, Y, DFY, LDFY, RPAR, IPAR)
+      use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
+      implicit none
+      integer,  intent(in)  :: N, LDFY
+      real(R8), intent(in)  :: X, Y(N)
+      real(R8), intent(out) :: DFY(LDFY,N)
+      real(R8), intent(in)  :: RPAR(*)
+      integer,  intent(in)  :: IPAR(*)
+    end subroutine jac_if
+  end interface
+
 end module interface_definitions
 
 module oslo
@@ -70,18 +86,28 @@ module oslo
   private
   public :: setup_odesolver
   public :: run_odesolver
+  public :: no_jacobian
 
   !> Concrete procedure pointing to one of the subroutine realizations
   procedure(solver_if), pointer :: run_odesolver
 
+  !> `jac` is the analytical Jacobian of `fcn` and `IJAC` says whether to use it:
+  !>   IJAC = 0 -> the solver builds the Jacobian by finite differences and never
+  !>               touches `jac`; pass the `no_jacobian` stub exported above.
+  !>   IJAC = 1 -> the solver calls `jac`.
+  !> Both are mandatory and both are plain pass-through: no wrapper inspects them
+  !> beyond handing them to the underlying integrator. Only the Hairer solvers
+  !> (H-radau5, H-rodas, H-sdirk4) honour them -- see the individual wrappers.
   abstract interface
-    subroutine solver_if(n, t1, t2, var, fcn, err, hmax, solout)
+    subroutine solver_if(n, t1, t2, var, fcn, jac, IJAC, err, hmax, solout)
       use, intrinsic :: iso_fortran_env, only : I4 => int32, R8 => real64
-      use interface_definitions, only : solout_if
+      use interface_definitions, only : solout_if, jac_if
       implicit none
       integer, intent(in)            :: n
       real(R8), intent(inout)        :: t1, t2
       real(R8), intent(inout)        :: var(n)
+      procedure(jac_if)              :: jac
+      integer, intent(in)            :: IJAC
       integer, intent(out)           :: err
       real(R8), intent(in), optional :: hmax
       procedure(solout_if), optional :: solout
@@ -97,7 +123,7 @@ module oslo
   integer, parameter :: NIOPT=3
   integer, allocatable :: IWORK_global(:)
   integer :: ITOL
-  integer :: IJAC, MLJAC, MUJAC, MUMAS, MLMAS, IMAS
+  integer :: MLJAC, MUJAC, MUMAS, MLMAS, IMAS
   integer :: LWORK, LIWORK
   integer :: LRCONT     ! see sdirk4.f
   integer :: NSMAX      ! see radau.f
@@ -237,12 +263,16 @@ contains
 
 
 # if defined(INTEL)
-subroutine wrap_dodesol(n,t1,t2,var,fcn,ierr,hmax,solout)
-  use interface_definitions, only : solout_if
+!> `jac`/`IJAC` are inert here: using them means switching from dodesol_mk52lfn
+!> to the analytic-Jacobian entry point dodesol_mk52lfa, a different call.
+subroutine wrap_dodesol(n,t1,t2,var,fcn,jac,IJAC,ierr,hmax,solout)
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: ierr
   real(R8), intent(in), optional :: hmax
   external :: fcn
@@ -267,12 +297,14 @@ end subroutine wrap_dodesol
 # endif
 
 
-subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
-  use interface_definitions, only : solout_if
+subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: IDID
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -291,7 +323,6 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
   if (present(hmax)) then; h = hmax * 1.0d-2
   else;                    h = 0.D0
   endif
-  IJAC = 0
   IMAS = 0
   MLJAC = n
   MLMAS = n
@@ -309,7 +340,7 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
   if (present(solout)) then
   call SDIRK4(n,fcn,t1,var,t2,H,                       &
                 RTOL,ATOL,ITOL,                        &
-                dummy,IJAC,MLJAC,MUJAC,                &
+                jac,IJAC,MLJAC,MUJAC,                  &
                 dummy,IMAS,MLMAS,MUMAS,                &
                 solout,IOUT,                           &
                 WORK,LWORK,IWORK,LIWORK,LRCONT,IDID,   &
@@ -318,7 +349,7 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
   else
   call SDIRK4(n,fcn,t1,var,t2,H,                       &
                 RTOL,ATOL,ITOL,                        &
-                dummy,IJAC,MLJAC,MUJAC,                &
+                jac,IJAC,MLJAC,MUJAC,                  &
                 dummy,IMAS,MLMAS,MUMAS,                &
                 dummy,IOUT,                           &
                 WORK,LWORK,IWORK,LIWORK,LRCONT,IDID,   &
@@ -329,12 +360,14 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,IDID,hmax,solout)
 end subroutine wrap_sdirk4
 
 
-subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax,solout)
-  use interface_definitions, only : solout_if
+subroutine wrap_radau5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: IDID
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -352,7 +385,6 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax,solout)
   integer :: MLE,MUE,MBJAC,MBB,MDIAG,MDIFF,MBDIAG
 
   h = 0.D0
-  IJAC = 0
   IMAS = 0
   MLJAC = n
   MLMAS = n
@@ -374,7 +406,7 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax,solout)
 
   call RADAU5(n,fcn,t1,var,t2,H,                        &
                 RTOL_,ATOL_,ITOL,                       &
-                dummy,IJAC,MLJAC,MUJAC,                 &
+                jac,IJAC,MLJAC,MUJAC,                   &
                 dummy,IMAS,MLMAS,MUMAS,                 &
                 dummy,IOUT,                            &
                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID, &
@@ -384,12 +416,14 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,IDID,hmax,solout)
 end subroutine wrap_radau5
 
 
-subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
-  use interface_definitions, only : solout_if
+subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: IDID
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -406,7 +440,6 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
   h = 0.D0
   IFCN = 0
   IDFX = 0
-  IJAC = 0
   IMAS = 0
   MLJAC = n
   MLMAS = n
@@ -421,7 +454,7 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
 
   call RODAS(n,fcn,IFCN,t1,var,t2,H,                   &
                 RTOL,ATOL,ITOL,                        &
-                dummy,IJAC,MLJAC,MUJAC,dummy,IDFX,     &
+                jac,IJAC,MLJAC,MUJAC,dummy,IDFX,       &
                 dummy,IMAS,MLMAS,MUMAS,                &
                 dummy,IOUT,                           &
                 WORK,LWORK,IWORK,LIWORK,RPAR,IPAR,IDID)
@@ -429,12 +462,15 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,IDID,hmax,solout)
 end subroutine wrap_rodas
 
 
-subroutine wrap_dopri5(n,t1,t2,var,fcn,IDID,hmax,solout)
-  use interface_definitions, only : solout_if
+!> `jac`/`IJAC` are inert here: DOPRI5 is explicit and never forms a Jacobian.
+subroutine wrap_dopri5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: IDID
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -463,13 +499,17 @@ subroutine wrap_dopri5(n,t1,t2,var,fcn,IDID,hmax,solout)
 end subroutine wrap_dopri5
 
 
-subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
+!> `jac`/`IJAC` are inert here: FATODE declares its Jacobian callback as
+!> JAC(T,Y,Jac0), which is not Hairer's signature, so it cannot be forwarded.
+subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use SDIRK_f90_Integrator
-  use interface_definitions, only : solout_if
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -489,13 +529,16 @@ subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
 end subroutine wrap_sdirk_FATODE
 
 
-subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
+!> `jac`/`IJAC` are inert here -- see wrap_sdirk_FATODE.
+subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use ROS_f90_Integrator, only: Rosenbrock
-  use interface_definitions, only : solout_if
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -518,13 +561,16 @@ subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
 end subroutine wrap_ros_FATODE
 
 
-subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
+!> `jac`/`IJAC` are inert here -- see wrap_sdirk_FATODE.
+subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use RK_f90_Integrator
-  use interface_definitions, only : solout_if
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -543,7 +589,9 @@ subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,err,hmax,solout)
 end subroutine wrap_rk_FATODE
 
 # if defined(SUNDIALS)
-subroutine wrap_cvode(n,t1,t2,var,fcn,err,hmax,solout)
+!> `jac`/`IJAC` are inert here: CVODES takes its Jacobian through FCVodeSetJacFn
+!> as a C-interoperable callback, not through the argument list.
+subroutine wrap_cvode(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use, intrinsic :: iso_c_binding
   use fsundials_core_mod
   use fcvodes_mod                   ! Fortran interface to CVODES
@@ -551,11 +599,13 @@ subroutine wrap_cvode(n,t1,t2,var,fcn,err,hmax,solout)
   use fsunmatrix_dense_mod          ! Fortran interface to dense SUNMatrix
   use fsunlinsol_dense_mod          ! Fortran interface to dense SUNLinearSolver
   use fsunnonlinsol_newton_mod
-  use interface_definitions, only : solout_if
+  use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
   real(R8), intent(inout)        :: t1, t2
   real(R8), intent(inout)        :: var(n)
+  procedure(jac_if)              :: jac
+  integer, intent(in)            :: IJAC
   integer, intent(out)           :: err
   real(R8), intent(in), optional :: hmax
   procedure(solout_if), optional :: solout
@@ -751,6 +801,20 @@ end subroutine wrap_cvode
 
 subroutine dummy()
 endsubroutine
+
+
+!> Stub to pass as `jac` when IJAC = 0, so that argument can stay mandatory.
+!> The integrators never call it in that case; zeroing DFY keeps it harmless
+!> if some future solver does.
+subroutine no_jacobian(N, X, Y, DFY, LDFY, RPAR, IPAR)
+  implicit none
+  integer,  intent(in)  :: N, LDFY
+  real(R8), intent(in)  :: X, Y(N)
+  real(R8), intent(out) :: DFY(LDFY,N)
+  real(R8), intent(in)  :: RPAR(*)
+  integer,  intent(in)  :: IPAR(*)
+  DFY = 0.0_R8
+end subroutine no_jacobian
 
 
 end module oslo
